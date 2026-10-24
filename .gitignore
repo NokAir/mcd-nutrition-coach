@@ -1,0 +1,12 @@
+# 构建/系统产物
+.DS_Store
+Thumbs.db
+
+# 本地运行与测试产生的临时文件
+*.log
+/tmp_*/
+__pycache__/
+node_modules/
+
+# 截图仅保留走查证据（如需新增请追加而非覆盖）
+screenshots/*.tmp
