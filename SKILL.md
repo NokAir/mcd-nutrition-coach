@@ -17,6 +17,12 @@ agent_created: true
 - 要**测试**它 → 按「测试」一节三层跑；
 - 要**发布**它（公开网址 / GitHub 仓库）→ 按「部署」与「仓库化」两节。
 
+## 线上链接与仓库
+
+- **GitHub 仓库（本 skill 的权威源）**：https://github.com/NokAir/mcd-nutrition-coach
+- **公开访问网址（WorkBuddy sites 部署，微信可打开）**：https://mcd-nutrition-coach.app.workbuddy.host/?sharecode=BV5CDL2UEC
+- 改代码以 GitHub 仓库为准；本地副本仅用于本机 WorkBuddy 直接加载。
+
 ## 快速开始
 
 ```bash
