@@ -47,9 +47,9 @@ M1 品牌壳与导航（顶栏 Logo/标题/步数徽标/音效开关、底部进
 ## 6. 视觉与交互规格（复刻的重点，做不好就不像原版）
 
 - **品牌色**：麦当劳红 `#DA291C`（深 `#B01208`）、黄 `#FFC72C`（浅 `#FFF4CC`）、黑 `#27251F`、米白底 `#FCFBF8→#F6F4F0`；圆角 18px、阴影三级。
-- **Apple 式模糊玻璃（三级）**：卡片/换一批面板/弹窗 `backdrop-filter:blur(22px) saturate(180%) brightness(1.04)` + 80% 白釉 + SVG `feTurbulence` 噪点 + 1px 内高光；控件（`.opt/.mt-opt/.chip/.ps-chip/按钮`）`blur(14px) saturate(170%)` + 66% 白釉 + 白描边 + 1px 深色细环；顶栏/底栏 `blur(20–24px)` 且滚动超过 8px 后加深（`.brandbar.scrolled`）。**关键前提**：必须先有 `.aurora` 四个模糊彩色光斑（品牌黄/红/橙，`blur(58px)`，24–36s 缓慢漂移）作为玻璃背后的底色，否则 `backdrop-filter` 看不出任何效果。配色思路来自两个公开实践：`kevinbism/liquid-glass-effect`（纯 CSS 玻璃配方）与 `shuding/liquid-glass`（只借鉴「高光沿边缘」，**不要**引入全屏 `feDisplacementMap`，手机端会掉帧、小字发糊）。
+- **Apple 式模糊玻璃（三级，v3 更透）**：卡片/换一批面板/弹窗 `backdrop-filter:blur(26px) saturate(180%) brightness(1.02)` + 44% 白釉 + 1px 内高光；控件（`.opt/.mt-opt/.chip/.ps-chip/按钮`）`blur(16–18px) saturate(170%)` + 34% 白釉 + 白描边；顶栏/底栏 `blur(20–24px)` 且滚动超过 8px 后加深（`.brandbar.scrolled`）。**关键前提**：必须先有 `.aurora` 四个模糊彩色光斑（品牌黄/红/橙，opacity .9、`blur(64px)`，24–36s 缓慢漂移）作为玻璃背后的底色，否则 `backdrop-filter` 看不出任何效果；**玻璃越透，极光必须越亮**（白釉从 66–80% 降到 28–44%，极光透明度与模糊半径要同步上调），否则文字发飘不可读。配色思路来自两个公开实践：`kevinbism/liquid-glass-effect`（纯 CSS 玻璃配方）与 `shuding/liquid-glass`（只借鉴「高光沿边缘」，**不要**引入全屏 `feDisplacementMap`，手机端会掉帧、小字发糊）。
 - **动效层 `Motion` IIFE**（全部可降级）：页面入场 + 子元素按 `--i` 错峰上浮（42ms 递进）、滚动玻璃态（rAF 节流）、步数徽标弹一下、按钮水波纹、桌面光标追光（`--mx/--my`）、价格数字滚动（720ms 三次缓出）、营养条生长、主按钮光泽扫过、进度条流光、下单成功光环、桌面悬停抬升（仅 `(hover:hover) and (pointer:fine)`）。`prefers-reduced-motion: reduce` 时 CSS 动画时长压到 0.01ms、JS 跳过全部动效、音效自动静音。
-- **滚轮选择器（年龄/身高/体重）**：`.wheel` 高 120px（每格 40px，选中项固定居中），三层结构 = 居中白底选中带 `.wheel-band` + 上下渐隐 `.wheel-fade` + 选项列表 `.wheel-list`；选中项红色加粗放大。四种操作：① 触屏/鼠标按住上下拖（`setPointerCapture`、边缘 0.32 系数橡皮筋、松手按 `vel*130` 惯性投影后 `round(idx - proj/ITEM_H)` 吸附最近一格）；② 桌面鼠标滚轮 ±1 格，**到边界直接 return 且不 `preventDefault`**（放行页面滚动），70ms 限流；③ 点击某一项；④ 键盘 ↑↓/←→ ±1、PageUp/PageDown ±5、Home/End。**窗口化渲染**：每次只输出当前 ±3 项共 7 个 `.wheel-item`（绝对定位 `top = i*40`，列表 `translateY(40 - idx*40 + drag)`），否则 170+ 选项会卡。数据流：选中值写隐藏 `input.p-num` 并派发 `input` 事件，由既有 `.p-num oninput` 落入 `STATE.persons[i][k]` 并触发 `updateBmiBadge(i)`——不新增数据通路。带 `tabindex=0` + `role="spinbutton"` + `aria-valuenow/valuetext`，换项播 `SFX.play('tap')`。范围：年龄 5–100、身高 100–220、体重 30–200，与 `validatePersons` 完全一致；`WHEEL_DEF = {age:25, height:170, weight:65}`，空值/非数字渲染前统一回落。
+- **滚轮选择器（年龄/身高/体重）**：`.wheel` 高 120px（每格 40px，选中项固定居中），三层结构 = 居中白底选中带 `.wheel-band` + 上下渐隐 `.wheel-fade` + 选项列表 `.wheel-list`；选中项红色加粗放大。四种操作：① 触屏/鼠标按住上下拖（`setPointerCapture`；`pointerdown` 记 `idx0 = el._idx`；`pointermove` 算 `raw = idx0 - (cy - sy)/ITEM_H`，**索引实时跟随手指**——`ni = clamp(round(vis))` 跨过整数格才重建 DOM，同时用亚像素 `el._drag = (ni - vis)*ITEM_H` 平滑跟随；边缘 0.32 系数橡皮筋；松手惯性 `proj = vis - vel*130/ITEM_H`——**符号必须取负**（`raw` 与 clientY 反向）——吸附最近一格）；② 桌面鼠标滚轮 ±1 格，**到边界直接 return 且不 `preventDefault`**（放行页面滚动），70ms 限流；③ 点击某一项；④ 键盘 ↑↓/←→ ±1、PageUp/PageDown ±5、Home/End。**窗口化渲染 + 缓存**：`renderWindow(el, s, e)` 只输出当前 ±3 项共 7 个 `.wheel-item`（绝对定位 `top = i*40`，列表 `translateY(40 - idx*40 + drag)`），并以 `_ws/_we/_widx/_wlen` 缓存，仅在范围/高亮/长度变化时才碰 DOM；带吸附动画时**渲染 `fromIdx→idx` 整段**再于 380ms 后收窄回 ±BUF，否则动画期间会露出空白中心带；松手后必须补 `if (el._idx === before) commit(el, false)`，否则惯性投影索引等于拖拽末索引时值不落 `STATE`。数据流：选中值写隐藏 `input.p-num` 并派发 `input` 事件，由既有 `.p-num oninput` 落入 `STATE.persons[i][k]` 并触发 `updateBmiBadge(i)`——不新增数据通路。带 `tabindex=0` + `role="spinbutton"` + `aria-valuenow/valuetext`，换项播 `SFX.play('tap')`。范围：年龄 5–100、身高 100–220、体重 30–200，与 `validatePersons` 完全一致；`WHEEL_DEF = {age:25, height:170, weight:65}`，空值/非数字渲染前统一回落。
 - **音效引擎 `SFX`**：Web Audio 纯合成，零音频文件。9 种音（tap/select/next/back/coin/success/error/jump/hit），AudioContext 单例 + 主增益总线（`VOL=0.22`）+ 指数包络防爆音；首次手势解锁（`resume()` + 1 样本静音缓冲，兼容 iOS Safari 与微信 webview）；同名 45ms 限流防叠音；`prefers-reduced-motion` 自动静音；静音开关 `localStorage` 持久化（try/catch 包裹）；无 AudioContext 环境静默降级。全局 `pointerdown` 委托一处路由覆盖全部按钮（含动态渲染卡片）。
 - **图标系统**：57 枚自绘 SVG 图标（餐型/口味/头像/操作/状态/营养/门店/食物/加载页漂浮物），`ICONS` 字典 + `icon()` 函数生成，**全站零 emoji**；每个餐品名称前还要配内嵌 SVG 食物插画（全菜单覆盖，自绘矢量，无版权风险）。
 - **加载层**：像素 M 动画 + 进度条 + 「为什么」说明条；仅 10 秒页弹小恐龙。
@@ -70,10 +70,11 @@ M1 品牌壳与导航（顶栏 Logo/标题/步数徽标/音效开关、底部进
 1. **语法**：抽出内联脚本 `node --check` 通过。
 2. **冒烟 61/61**：计算层纯函数单测（bmi/bmr/预算/打分/换单品/压预算/用券/团购派生值）。
 3. **集成 71/71**（jsdom，`runScripts:'dangerously'`，url 用 `http://localhost/`）：场景 A 自定义 2 人麦乐送全 8 步、场景 B 团购 3 人、场景 D 1 人极简流程、场景 F 分享功能已移除；每场景断言零运行时错误。
-4. **滚轮专项 52/52**：渲染（3 个滚轮/7 个节点/默认值/隐藏 input 同步/spinbutton 语义）、键盘、鼠标滚轮（含边界放行）、点击选项、触摸拖拽（`pointerdown/move/up` + 惯性 + 橡皮筋 + 不越界）、多人 9 个滚轮相互独立、离开页面再回来值保留、`prefers-reduced-motion` 仍可用、极端值（100 岁/200kg/100cm）走完整推荐不崩。
-5. **导航防护**：加载期间点上一步不会被拽走（`navSeq` 令牌）。
-6. **真实浏览器走查**（Chrome 无头 + `page.touchscreen`）：8 步全流程零错误；真实触屏拖滚轮值正确变化且页面 `scrollY` 不变；玻璃 `backdrop-filter` 计算值生效；3 秒页不弹游戏、10 秒页弹游戏、下单页 2 秒不弹；至少 12 张截图归档 `screenshots/`。
-7. **DoD 清单**：预算 10 元、忌口全选、5 人、跳过身体数据四种极端路径均不崩；结果页六项营养 = 菜品行求和（抽查 3 人）；README/`SYSTEM_PROMPT.md`/`workbuddy.md` 与代码一致；移除设计工具注入的 `data-page-node-id` 属性。
+4. **滚轮专项 52/52**：渲染（3 个滚轮/7 个节点/默认值/隐藏 input 同步/spinbutton 语义）、键盘、鼠标滚轮（含边界放行）、点击选项、触摸拖拽（`pointerdown/move/up` + 惯性方向 + 橡皮筋 + 不越界）、多人 9 个滚轮相互独立、离开页面再回来值保留、`prefers-reduced-motion` 仍可用、极端值（100 岁/200kg/100cm）走完整推荐不崩。
+5. **拖拽专项 17/17**（`wheel_drag_test.js`）：30 步连续拖拽全程无空白中心带、快甩惯性方向正确（上甩变大/下甩变小）、100 帧内 DOM 重建 ≤20 次、拖完值落 `STATE`（多人相互独立）、橡皮筋回弹不越界。
+6. **导航防护**：加载期间点上一步不会被拽走（`navSeq` 令牌）。
+7. **真实浏览器走查**（Chrome 无头 + `page.touchscreen`）：8 步全流程零错误；真实触屏拖滚轮 400px 全程 20 次采样无空白、值正确变化且页面 `scrollY` 不变；玻璃 `backdrop-filter` 计算值生效；3 秒页不弹游戏、10 秒页弹游戏、下单页 2 秒不弹；至少 12 张截图归档 `screenshots/`。
+8. **DoD 清单**：预算 10 元、忌口全选、5 人、跳过身体数据四种极端路径均不崩；结果页六项营养 = 菜品行求和（抽查 3 人）；README/`SYSTEM_PROMPT.md`/`workbuddy.md` 与代码一致；移除设计工具注入的 `data-page-node-id` 属性。
 
 ## 9. 交付物
 
@@ -87,8 +88,10 @@ M1 品牌壳与导航（顶栏 Logo/标题/步数徽标/音效开关、底部进
 - `scoreOption` 低钠项符号写反 → 高钠组合反而优先。
 - `btnNext` 的 `finally` 无条件解禁 → 未选录入方式也能跳页；应记录 `startStep`，仅当未跳转时才恢复可用。
 - 进度条把 `threshold` 当时长 → 3 秒页变 160 秒。
-- 滚轮拖拽吸附写成 `round((ITEM_H - proj)/ITEM_H)` → 拖 40px 跳 2 格；正确是 `round(idx - proj/ITEM_H)`。
-- 玻璃背后没有彩色光斑 → `backdrop-filter` 完全看不见。
+- 拖滚轮数据变空白、卡顿不连贯：拖拽中 `idx` 不动 → 窗口固定 ±3 → 拖出 3 格露出未渲染空白带，且每帧重建整个 `.wheel-list`。正确：**索引实时跟随手指**（跨整数格才重建 DOM）+ 亚像素 `drag` 偏移 + `renderWindow` 缓存 + 动画渲染 `fromIdx→idx` 整段。
+- 松手后年龄/身高/体重不变：`setIdx` 只在索引变化时 `commit`，惯性投影索引常等于拖拽末索引 → 值不落 `STATE`；`up()` 必须补 `if (el._idx === before) commit(el, false)`。
+- 惯性方向甩反：`proj` 写成 `vis + vel*130/ITEM_H`；`raw = idx0 - (cy - sy)/ITEM_H` 与 clientY 反向，**必须取负号** `vis - vel*130/ITEM_H`。
+- 玻璃背后没有彩色光斑 → `backdrop-filter` 完全看不见；玻璃调更透时不同步提亮极光 → 文字发飘不可读（白釉 66–80% → 28–44%，极光 opacity .9 / blur 64px 同步上调）。
 - 门店默认选中在 HTML 拼好后才赋值 → 第一张卡片没有选中态；应先算 `selId` 再渲染。
 - 换一批面板的徽标缺全局尺寸约束 → 被撑成整块大红 M。
 

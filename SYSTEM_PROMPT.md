@@ -322,13 +322,14 @@ var STATE = {
 | 项 | 约定 |
 |---|---|
 | 常量 | `ITEM_H = 40`（每格高度，`.wheel` 高度 = 3×40 = 120px，选中项固定居中）、`BUF = 3`（上下各多渲染 3 项）、吸附动画 `transform .3s cubic-bezier(.22,1,.36,1)` |
-| 交互 | ① `pointerdown/move/up` 拖拽（`setPointerCapture`，拖动量以当前项为基准，越界 0.32 系数橡皮筋，松手按 `vel*130` 惯性投影后 `round` 吸附）；② `wheel` 事件 ±1 格，**滚到边界时 return 且不 `preventDefault`**（放行页面滚动），70ms 限流；③ 点击 `.wheel-item` 直接选中（拖拽过的 `moved` 标记屏蔽误触）；④ 键盘 ↑↓/←→ ±1、PageUp/PageDown ±5、Home/End 到头 |
-| 渲染 | **窗口化**：`paint()` 每次只输出 `[idx-BUF, idx+BUF]` 共 ≤7 个 `.wheel-item`（绝对定位 `top = i*ITEM_H`），`.wheel-list` 用 `translateY(ITEM_H - idx*ITEM_H + drag)` 定位；170+ 选项也只有 7 个节点 |
+| 交互 | ① `pointerdown/move/up` 拖拽（`setPointerCapture`）。`pointerdown` 记录 `idx0 = el._idx`、`el._vis = el._idx`；`pointermove` 计算 `raw = idx0 - (cy - sy)/ITEM_H`，**索引实时跟随手指**（`ni = clamp(round(vis))`，`vis` 为 `raw` 的 0.32 橡皮筋值），同时用亚像素偏移 `el._drag = (ni - vis)*ITEM_H` 做平滑跟随；`ni === el._idx` 时**不重建 DOM**（跨过整数格才重建）；越界 0.32 系数橡皮筋。`up`：`before = el._idx; proj = (el._vis||el._idx) - vel*130/ITEM_H; setIdx(round(proj), true, false, before)`——**惯性方向必须取负号**（`raw` 是 `cy - sy` 的负向，`vel` 是 clientY 方向速度）。② `wheel` 事件 ±1 格，**滚到边界时 return 且不 `preventDefault`**（放行页面滚动），70ms 限流；③ 点击 `.wheel-item` 直接选中（拖拽过的 `moved` 标记屏蔽误触）；④ 键盘 ↑↓/←→ ±1、PageUp/PageDown ±5、Home/End 到头 |
+| 渲染 | **窗口化 + 缓存**：`renderWindow(el, s, e)` 只输出 `[idx-BUF, idx+BUF]` 共 ≤7 个 `.wheel-item`（绝对定位 `top = i*ITEM_H`），并以 `el._ws/_we/_widx/_wlen` 缓存，仅在范围/高亮/长度变化时才碰 DOM；`.wheel-list` 用 `translateY(ITEM_H - idx*ITEM_H + drag)` 定位（`applyTransform`）；170+ 选项也只有 7 个节点。`setIdx(el, idx, anim, quiet, fromIdx)` 带动画时**渲染 `fromIdx→idx` 整段**（动画期间不出现空白中心带），380ms 后再收窄回 ±BUF。拖动全程每帧 DOM 重建次数为 0~数次（只有跨整数格时） |
+| 松手提交 | `up()` 里 `setIdx(round(proj), ...)` 后必须补 `if (el._idx === before) commit(el, false);`——否则当投影后索引与拖拽末索引相同时 `setIdx` 判定 `changed=false` 不提交，**拖拽结束的值不会落入 `STATE`**（历史 bug：年龄/身高/体重拖完不变） |
 | 数据流 | 选中后 `commit()` 写隐藏 `input.p-num.value` 并 `dispatchEvent(new Event('input',{bubbles:true}))`，由既有 `.p-num oninput` 处理器落入 `STATE.persons[i][k]` 并触发 `updateBmiBadge(i)`——**不新增数据通路，`Person` 结构不变** |
 | 语义 | `.wheel` 带 `tabindex="0"` + `role="spinbutton"` + `aria-valuenow`/`aria-valuetext` |
 | 默认值 | `WHEEL_DEF = {age:25, height:170, weight:65}`（滚轮必须有当前值；空值/非数字在 `renderInfoDynamic` 里统一回落） |
 | 降级 | `prefers-reduced-motion: reduce` 时关掉吸附过渡（交互仍可用）；换项音效走 `SFX.play('tap')`（自带 45ms 限流与静音开关） |
-| 样式 | `.wheel`（`touch-action:none` + `overflow:hidden` + `user-select:none`）、`.wheel-band`（居中白底选中带）、`.wheel-fade`（上下渐隐）、`.wheel-item.on`（红色加粗放大） |
+| 样式 | `.wheel`（`touch-action:none` + `overflow:hidden` + `user-select:none`，**液态玻璃**：`background:rgba(255,255,255,.42)` + `backdrop-filter:blur(14px) saturate(160%)` + `border:1px solid var(--glass-stroke)`）、`.wheel-band`（居中白底选中带）、`.wheel-fade`（上下渐隐）、`.wheel-item.on`（红色加粗放大） |
 
 ### 4.11 算法契约（必须按此实现，否则推荐结果会漂移）
 **① 打分（越小越优，`sodiumTerm = sodium * 0.004` 保证同分优先低钠）**

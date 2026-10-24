@@ -136,14 +136,16 @@ body{
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 /* 滚轮选择器（年龄/身高/体重）：触屏上下滑 + 桌面滚轮 + 点击 + 键盘 */
 .wheel{position:relative;height:120px;border-radius:14px;overflow:hidden;cursor:grab;
-  border:1.5px solid var(--mcd-gray-2);background:var(--mcd-gray-1);
+  border:1px solid var(--glass-stroke);background:rgba(255,255,255,.42);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  backdrop-filter:blur(14px) saturate(160%);
   touch-action:none;-webkit-user-select:none;user-select:none;outline:none}
 .wheel.dragging{cursor:grabbing}
 .wheel:focus-visible{border-color:var(--mcd-yellow);box-shadow:0 0 0 3px rgba(255,199,44,.22)}
 .wheel-band{position:absolute;left:5px;right:5px;top:40px;height:40px;border-radius:10px;
-  background:var(--white);box-shadow:var(--shadow-sm);pointer-events:none}
+  background:rgba(255,255,255,.74);box-shadow:var(--shadow-sm);pointer-events:none}
 .wheel-fade{position:absolute;left:0;right:0;top:0;height:40px;pointer-events:none;
-  background:linear-gradient(180deg,rgba(247,247,247,.94) 15%,rgba(247,247,247,0))}
+  background:linear-gradient(180deg,rgba(255,255,255,.66) 15%,rgba(255,255,255,0) 58%)}
 .wheel-fade.b{top:auto;bottom:0;transform:rotate(180deg)}
 .wheel-list{position:absolute;left:0;right:0;top:0;will-change:transform}
 .wheel-item{position:absolute;left:0;right:0;height:40px;line-height:40px;text-align:center;
@@ -459,36 +461,37 @@ body{
    ③ glassmorphism 参考实现：玻璃必须有「背后的彩色光斑」才成立
    ============================================================ */
 :root{
-  --glass-tint:rgba(255,255,255,.66);
-  --glass-tint-strong:rgba(255,255,255,.80);
-  --glass-tint-soft:rgba(255,255,255,.52);
-  --glass-stroke:rgba(255,255,255,.72);
-  --glass-blur:22px;
+  /* 液态玻璃 v3：整体更透——白釉大幅下调、模糊略增保可读、描边与高光加强勾边 */
+  --glass-tint:rgba(255,255,255,.34);
+  --glass-tint-strong:rgba(255,255,255,.44);
+  --glass-tint-soft:rgba(255,255,255,.28);
+  --glass-stroke:rgba(255,255,255,.88);
+  --glass-blur:26px;
   --glass-sat:180%;
-  --glass-shadow:0 1px 2px rgba(16,24,40,.04),0 12px 32px -18px rgba(16,24,40,.22);
-  --glass-inner:inset 0 1px 0 rgba(255,255,255,.92),inset 0 -1px 0 rgba(39,37,31,.04);
-  --glass-ring:0 0 0 1px rgba(39,37,31,.06);
-  --sheen:linear-gradient(150deg,rgba(255,255,255,.60) 0%,rgba(255,255,255,.16) 36%,rgba(255,255,255,0) 58%);
+  --glass-shadow:0 1px 2px rgba(16,24,40,.05),0 14px 36px -20px rgba(16,24,40,.28);
+  --glass-inner:inset 0 1px 0 rgba(255,255,255,.98),inset 0 -1px 0 rgba(39,37,31,.08);
+  --glass-ring:0 0 0 1px rgba(39,37,31,.07);
+  --sheen:linear-gradient(150deg,rgba(255,255,255,.74) 0%,rgba(255,255,255,.20) 36%,rgba(255,255,255,0) 58%);
   --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E");
   --ease-out:cubic-bezier(.22,1,.36,1);
 }
 
-/* ---------- 玻璃背后的彩色光斑（无它则玻璃无效） ---------- */
+/* ---------- 玻璃背后的彩色光斑（无它则玻璃无效；玻璃越透，光斑要越鲜亮） ---------- */
 .app{position:relative}
 .aurora{position:fixed;left:50%;transform:translateX(-50%);top:0;bottom:0;width:100%;max-width:440px;
   z-index:0;overflow:hidden;pointer-events:none}
-.aurora i{position:absolute;border-radius:50%;filter:blur(58px);opacity:.62;
+.aurora i{position:absolute;border-radius:50%;filter:blur(64px);opacity:.9;
   will-change:transform;animation:orbDrift 24s ease-in-out infinite}
 .aurora i:nth-child(1){width:270px;height:270px;left:-56px;top:40px;
-  background:radial-gradient(circle,rgba(255,199,44,.78) 0%,rgba(255,199,44,0) 70%)}
+  background:radial-gradient(circle,rgba(255,199,44,.95) 0%,rgba(255,199,44,0) 70%)}
 .aurora i:nth-child(2){width:290px;height:290px;right:-104px;top:30%;
-  background:radial-gradient(circle,rgba(218,41,28,.36) 0%,rgba(218,41,28,0) 70%);
+  background:radial-gradient(circle,rgba(218,41,28,.52) 0%,rgba(218,41,28,0) 70%);
   animation-delay:-7s;animation-duration:28s}
 .aurora i:nth-child(3){width:330px;height:330px;left:-118px;bottom:-70px;
-  background:radial-gradient(circle,rgba(255,138,0,.44) 0%,rgba(255,138,0,0) 70%);
+  background:radial-gradient(circle,rgba(255,138,0,.6) 0%,rgba(255,138,0,0) 70%);
   animation-delay:-13s;animation-duration:32s}
 .aurora i:nth-child(4){width:210px;height:210px;right:-52px;bottom:14%;
-  background:radial-gradient(circle,rgba(255,199,44,.40) 0%,rgba(255,199,44,0) 70%);
+  background:radial-gradient(circle,rgba(255,199,44,.56) 0%,rgba(255,199,44,0) 70%);
   animation-delay:-18s;animation-duration:36s}
 @keyframes orbDrift{
   0%,100%{transform:translate3d(0,0,0) scale(1)}
@@ -504,13 +507,13 @@ body{
   background-repeat:repeat,no-repeat;
   border:1px solid var(--glass-stroke);
   box-shadow:var(--glass-ring),var(--glass-inner),var(--glass-shadow);
-  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(1.04);
-  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(1.04);
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(1.02);
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(1.02);
 }
 /* 指纹追光（仅桌面精确指针）*/
 .card.glow,.pkg-card.glow{
   background-image:var(--noise),
-    radial-gradient(260px circle at var(--mx,50%) var(--my,0%),rgba(255,199,44,.18),rgba(255,199,44,0) 62%),
+    radial-gradient(260px circle at var(--mx,50%) var(--my,0%),rgba(255,199,44,.22),rgba(255,199,44,0) 62%),
     var(--sheen);
   background-size:120px 120px,100% 100%,100% 100%;
   background-repeat:repeat,no-repeat,no-repeat;
@@ -519,22 +522,22 @@ body{
 /* ---------- 二级玻璃：可点控件 ---------- */
 .opt,.mt-opt,.chip,.ps-chip,.swap-btn,.btn-outline,.pkg-card{
   background-color:var(--glass-tint);
-  background-image:linear-gradient(140deg,rgba(255,255,255,.55),rgba(255,255,255,0) 62%);
-  border-color:rgba(255,255,255,.92);
-  -webkit-backdrop-filter:blur(14px) saturate(170%);
-  backdrop-filter:blur(14px) saturate(170%);
+  background-image:linear-gradient(140deg,rgba(255,255,255,.62),rgba(255,255,255,0) 62%);
+  border-color:rgba(255,255,255,.95);
+  -webkit-backdrop-filter:blur(16px) saturate(170%);
+  backdrop-filter:blur(16px) saturate(170%);
 }
-.opt,.mt-opt{box-shadow:0 0 0 1px rgba(39,37,31,.075),0 1px 0 rgba(255,255,255,.95) inset,0 6px 18px -14px rgba(16,24,40,.38)}
-.chip,.ps-chip,.swap-btn,.btn-outline,.pkg-card{box-shadow:0 0 0 1px rgba(39,37,31,.075),0 1px 0 rgba(255,255,255,.95) inset,0 4px 14px -12px rgba(16,24,40,.4)}
+.opt,.mt-opt{box-shadow:0 0 0 1px rgba(39,37,31,.085),0 1px 0 rgba(255,255,255,.95) inset,0 6px 18px -14px rgba(16,24,40,.42)}
+.chip,.ps-chip,.swap-btn,.btn-outline,.pkg-card{box-shadow:0 0 0 1px rgba(39,37,31,.085),0 1px 0 rgba(255,255,255,.95) inset,0 4px 14px -12px rgba(16,24,40,.45)}
 
 /* 选中态保留红黄语义，同样走玻璃 */
 .opt.sel,.mt-opt.sel,.chip.on,.ps-chip.on{
-  background-color:rgba(255,250,232,.88);
-  background-image:radial-gradient(120% 110% at 0% 0%,rgba(255,199,44,.30),rgba(255,255,255,0) 62%),
-    linear-gradient(140deg,rgba(255,255,255,.72),rgba(255,255,255,0) 60%);
-  border-color:rgba(218,41,28,.58);
-  -webkit-backdrop-filter:blur(16px) saturate(180%);
-  backdrop-filter:blur(16px) saturate(180%);
+  background-color:rgba(255,250,232,.74);
+  background-image:radial-gradient(120% 110% at 0% 0%,rgba(255,199,44,.34),rgba(255,255,255,0) 62%),
+    linear-gradient(140deg,rgba(255,255,255,.78),rgba(255,255,255,0) 60%);
+  border-color:rgba(218,41,28,.62);
+  -webkit-backdrop-filter:blur(18px) saturate(180%);
+  backdrop-filter:blur(18px) saturate(180%);
 }
 /* 选中瞬间的黄色光环 */
 .opt.sel,.mt-opt.sel{animation:selGlow .55s ease-out}
@@ -542,49 +545,49 @@ body{
 
 /* ---------- 顶栏 / 底栏：iOS 式滚动玻璃 ---------- */
 .brandbar{
-  background-color:rgba(255,255,255,.60);
+  background-color:rgba(255,255,255,.40);
   background-image:var(--noise);
   background-size:120px 120px;
-  -webkit-backdrop-filter:blur(20px) saturate(190%) brightness(1.05);
-  backdrop-filter:blur(20px) saturate(190%) brightness(1.05);
-  border-bottom:1px solid rgba(255,255,255,.55);
+  -webkit-backdrop-filter:blur(20px) saturate(190%) brightness(1.02);
+  backdrop-filter:blur(20px) saturate(190%) brightness(1.02);
+  border-bottom:1px solid rgba(255,255,255,.72);
   box-shadow:0 1px 0 rgba(39,37,31,.03),0 10px 30px -24px rgba(16,24,40,.50);
   transition:background-color .26s ease,box-shadow .26s ease,padding .26s ease,backdrop-filter .26s ease;
 }
 .brandbar.scrolled{
-  background-color:rgba(255,255,255,.86);
+  background-color:rgba(255,255,255,.66);
   box-shadow:0 1px 0 rgba(39,37,31,.05),0 16px 36px -24px rgba(16,24,40,.55);
   padding-top:9px;padding-bottom:8px;
 }
 .brandbar .sound-btn{
-  background-color:rgba(255,255,255,.55);
-  border-color:rgba(255,255,255,.78);
+  background-color:rgba(255,255,255,.42);
+  border-color:rgba(255,255,255,.85);
   -webkit-backdrop-filter:blur(10px) saturate(170%);
   backdrop-filter:blur(10px) saturate(170%);
 }
 .bottombar{
-  background-color:rgba(255,255,255,.64);
+  background-color:rgba(255,255,255,.44);
   background-image:var(--noise);
   background-size:120px 120px;
-  -webkit-backdrop-filter:blur(24px) saturate(190%) brightness(1.06);
-  backdrop-filter:blur(24px) saturate(190%) brightness(1.06);
-  border-top:1px solid rgba(255,255,255,.72);
+  -webkit-backdrop-filter:blur(24px) saturate(190%) brightness(1.03);
+  backdrop-filter:blur(24px) saturate(190%) brightness(1.03);
+  border-top:1px solid rgba(255,255,255,.85);
   box-shadow:0 -1px 0 rgba(39,37,31,.04),0 -16px 40px -28px rgba(16,24,40,.45);
 }
 
 /* ---------- 输入框 / 分段控件的玻璃质感 ---------- */
 .field input,.person-head .p-name,.seg{
-  background-color:rgba(255,255,255,.72);
-  -webkit-backdrop-filter:blur(10px) saturate(160%);
-  backdrop-filter:blur(10px) saturate(160%);
+  background-color:rgba(255,255,255,.48);
+  -webkit-backdrop-filter:blur(12px) saturate(160%);
+  backdrop-filter:blur(12px) saturate(160%);
 }
-.seg-btn.on{background-color:rgba(255,255,255,.92);box-shadow:0 1px 0 rgba(255,255,255,.9) inset,var(--shadow-sm)}
+.seg-btn.on{background-color:rgba(255,255,255,.82);box-shadow:0 1px 0 rgba(255,255,255,.9) inset,var(--shadow-sm)}
 
 /* ---------- 弹窗 / 加载层 / Toast ---------- */
 .modal-wrap{-webkit-backdrop-filter:blur(8px) saturate(140%);backdrop-filter:blur(8px) saturate(140%)}
 .modal-card{border-radius:22px}
 .loader{
-  background-color:rgba(247,247,247,.88);
+  background-color:rgba(247,247,247,.66);
   background-image:var(--noise);
   background-size:120px 120px;
   -webkit-backdrop-filter:blur(16px) saturate(150%);
@@ -1511,17 +1514,25 @@ var Wheel = (function(){
     return out;
   }
   function idxOfVal(vals, v){ for (var i = 0; i < vals.length; i++) if (vals[i] === v) return i; return -1; }
-  /* 窗口化渲染：只画当前项 ±BUF，几十个 DOM 节点搞定 170+ 选项 */
-  function paint(el, anim){
+  /* 窗口化渲染：默认只画当前项 ±BUF；显式传入 [s,e] 时按区间画（吸附动画用，防止滑到半路露出空白） */
+  function renderWindow(el, s, e){
     var list = el._list, vals = el._vals, idx = el._idx;
-    var s = Math.max(0, idx - BUF), e = Math.min(vals.length - 1, idx + BUF), html = '';
+    if (s == null){ s = Math.max(0, idx - BUF); e = Math.min(vals.length - 1, idx + BUF); }
+    if (el._ws === s && el._we === e && el._widx === idx && el._wlen === vals.length) return;
+    var html = '';
     for (var i = s; i <= e; i++){
       html += '<div class="wheel-item' + (i === idx ? ' on' : '') + '" data-v="' + vals[i] + '" style="top:' + (i * ITEM_H) + 'px">' + vals[i] + '</div>';
     }
     list.innerHTML = html;
-    list.style.transition = (anim && !reduced) ? ANIM : 'none';
-    list.style.transform = 'translateY(' + (ITEM_H - idx * ITEM_H + (el._drag || 0)) + 'px)';
+    el._ws = s; el._we = e; el._widx = idx; el._wlen = vals.length;
+    el.setAttribute('aria-valuenow', String(vals[idx]));
+    el.setAttribute('aria-valuetext', vals[idx] + ' ' + (el.dataset.unit || ''));
   }
+  function applyTransform(el, anim){
+    el._list.style.transition = (anim && !reduced) ? ANIM : 'none';
+    el._list.style.transform = 'translateY(' + (ITEM_H - el._idx * ITEM_H + (el._drag || 0)) + 'px)';
+  }
+  function paint(el, anim){ renderWindow(el); applyTransform(el, anim); }
   function commit(el, quiet){
     var v = el._vals[el._idx], inp = el._inp;
     el.setAttribute('aria-valuenow', String(v));
@@ -1532,17 +1543,29 @@ var Wheel = (function(){
     }
     if (!quiet && typeof SFX !== 'undefined'){ try { SFX.play('tap'); } catch(e){} }
   }
-  function setIdx(el, idx, anim, quiet){
+  function setIdx(el, idx, anim, quiet, fromIdx){
     idx = Math.max(0, Math.min(el._vals.length - 1, idx));
+    var start = (fromIdx == null ? el._idx : fromIdx);
     var changed = idx !== el._idx;
     el._idx = idx;
-    paint(el, anim);
+    if (anim){
+      /* 吸附动画可能跨越数格：窗口按「起点→目标」整段渲染，避免滑到半路露出未渲染区域 */
+      var s = Math.max(0, Math.min(start, idx) - BUF);
+      var e = Math.min(el._vals.length - 1, Math.max(start, idx) + BUF);
+      renderWindow(el, s, e);
+      applyTransform(el, true);
+      clearTimeout(el._narrowT);
+      el._narrowT = setTimeout(function(){ if (el._list) renderWindow(el); }, 380);
+    } else {
+      renderWindow(el);
+      applyTransform(el, false);
+    }
     if (changed) commit(el, quiet);
   }
   function bind(el){
     var list = el.querySelector('.wheel-list');
     if (!list) return;
-    el._list = list; el._vals = valsOf(el); el._drag = 0;
+    el._list = list; el._vals = valsOf(el); el._drag = 0; el._vis = null;
     var cur = (el.dataset.val === '' || el.dataset.val == null) ? null : +el.dataset.val;
     var idx = (cur == null) ? Math.floor(el._vals.length / 2) : idxOfVal(el._vals, cur);
     el._idx = idx < 0 ? Math.floor(el._vals.length / 2) : idx;
@@ -1551,38 +1574,47 @@ var Wheel = (function(){
     paint(el, false);
     commit(el, true);
 
-    var sy = 0, ly = 0, lt = 0, vel = 0, moved = false, active = false, pid = null;
+    var sy = 0, ly = 0, lt = 0, vel = 0, moved = false, active = false, pid = null, idx0 = 0;
     el.addEventListener('pointerdown', function(e){
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       active = true; moved = false; pid = e.pointerId;
       sy = ly = e.clientY; lt = Date.now(); vel = 0; el._drag = 0;
+      idx0 = el._idx;                       /* 记录起拖时的索引，作为连续跟随的基准 */
+      el._vis = el._idx;
       el.classList.add('dragging');
       try { el.setPointerCapture(e.pointerId); } catch(_){}
     });
     el.addEventListener('pointermove', function(e){
       if (!active || e.pointerId !== pid) return;
-      var dy = e.clientY - ly;
-      if (Math.abs(e.clientY - sy) > 3) moved = true;
-      var off = el._drag + dy;
-      /* 边缘橡皮筋：拖动量以「当前项」为基准，向上最多滑到底、向下最多滑到顶 */
-      var maxD = (el._vals.length - 1 - el._idx) * ITEM_H;
-      var minD = -el._idx * ITEM_H;
-      if (off > maxD) off = maxD + (off - maxD) * .32;
-      else if (off < minD) off = minD + (off - minD) * .32;
-      el._drag = off;
+      var cy = e.clientY;
+      if (Math.abs(cy - sy) > 3) moved = true;
+      /* 索引实时跟随手指：raw 为连续目标格位，手指上滑 → 索引增大 */
+      var raw = idx0 - (cy - sy) / ITEM_H;
+      var lo = 0, hi = el._vals.length - 1, vis = raw;
+      if (raw < lo) vis = lo + (raw - lo) * .32;              /* 顶部橡皮筋 */
+      else if (raw > hi) vis = hi + (raw - hi) * .32;         /* 底部橡皮筋 */
+      var ni = Math.max(lo, Math.min(hi, Math.round(vis)));
+      el._vis = vis;
+      if (ni !== el._idx){ el._idx = ni; renderWindow(el); }  /* 只有跨过整数格才重建 DOM */
+      el._drag = (ni - vis) * ITEM_H;                         /* 亚像素平滑余量，保证连续不跳格 */
+      applyTransform(el, false);
       var now = Date.now();
-      if (now - lt > 8){ vel = (e.clientY - ly) / (now - lt); lt = now; }
-      ly = e.clientY;
-      paint(el, false);
+      if (now - lt > 8){ vel = (cy - ly) / (now - lt); lt = now; }
+      ly = cy;
     });
     function up(){
       if (!active) return;
       active = false;
       el.classList.remove('dragging');
-      /* 惯性投影：再按当前速度往前滑 130ms，然后吸附到最近的一格 */
-      var proj = el._drag + vel * 130;
-      el._drag = 0;
-      setIdx(el, Math.round(el._idx - proj / ITEM_H), true);
+      /* 惯性投影：按当前速度再滑 130ms（折算成格）。
+         注意符号：raw = idx - (cy-sy)/ITEM_H，手指上滑（cy 变小）时索引增大，
+         而 vel 是 cy 方向的速度，故投影要取负号 */
+      var before = el._idx;
+      var proj = (el._vis == null ? el._idx : el._vis) - vel * 130 / ITEM_H;
+      el._vis = null; el._drag = 0;
+      setIdx(el, Math.round(proj), true, false, before);
+      /* 拖动过程中索引已实时变化但没有落库；若最终值与拖动末尾相同，这里补一次提交 */
+      if (el._idx === before) commit(el, false);
     }
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', up);
