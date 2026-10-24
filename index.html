@@ -234,7 +234,14 @@ body{
 .tag-green{background:var(--mcd-green);color:#fff}
 .tag-gray{background:var(--mcd-gray-2);color:var(--mcd-gray-3)}
 .tag-red{background:#FDECEA;color:var(--mcd-red)}
+.tag-blue{background:#E8F1FB;color:#1A5FB4}
 .dist{font-size:12px;color:var(--mcd-gray-3);flex:none}
+.dist-src{display:block;font-size:10px;color:var(--mcd-gray-3);opacity:.75;margin-top:1px}
+.store-code{font-size:11px!important;color:var(--mcd-gray-3);opacity:.85;font-variant-numeric:tabular-nums}
+.store-group{font-size:12px;color:var(--mcd-gray-3);margin:14px 2px 8px;display:flex;align-items:center;gap:6px}
+.store-group::after{content:'';flex:1;height:1px;background:var(--mcd-gray-2)}
+.store-group:first-child{margin-top:2px}
+.store-code-inline{font-size:11px;color:var(--mcd-gray-3);font-weight:400}
 .store-live{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 12px}
 .store-live-status{font-size:12px;color:var(--mcd-gray-3);line-height:1.5}
 .store-live-status b{color:var(--mcd-green)}
@@ -797,7 +804,7 @@ body{
           <button class="store-refresh" id="storeRefreshBtn" data-page-node-id="iWqLjihjC1G9Rlw9fXtA9F"><svg class="ico ico-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-page-node-id="Wr4MP6hpZ4Fpy6k4u5b4Fq"><path d="M20 12a8 8 0 1 1-2.4-5.7" data-page-node-id="bvT3b0vyS6R6tFv3j0bjtr"/><path d="M20 3.6v4.8h-4.8" data-page-node-id="KgPVNsOIazjANLYc1KXAFQ"/></svg>刷新门店</button>
         </div>
         <div id="storeList" data-page-node-id="JEIpIjIRoI6GD9AEi8kQmY"></div>
-        <p class="hint" data-page-node-id="UokIYE5rrtq8EG3MbefsyE">距离基于实时定位计算，列表随位置自动更新；门店与坐标为演示数据，真实门店由麦当劳 MCP <b data-page-node-id="HWgS39ms4hAShGFGCip1ww">query-nearby-stores</b> 返回。</p>
+        <p class="hint" data-page-node-id="UokIYE5rrtq8EG3MbefsyE">距离基于实时定位计算（演示门店）；<b>真实门店</b>为 2026-10-24 通过麦当劳 MCP <b data-page-node-id="HWgS39ms4hAShGFGCip1ww">query-nearby-stores</b> 查询「天津市·蓟州区」的返回快照，含门店编号与营业时间；下单仍为演示态，不会真实扣款。</p>
       </div>
     </section>
 
@@ -1167,6 +1174,24 @@ var STORES = [
   {id:'s2', name:'麦当劳(蓟州中昌店)',   addr:'蓟州区中昌北路 168 号', dist:1.8, drive:true,  delivery:true,  lat:40.0415, lng:117.3962},
   {id:'s3', name:'麦当劳(蓟州人民路店)', addr:'蓟州区人民西路 22 号',  dist:2.5, drive:false, delivery:true,  lat:40.0521, lng:117.4011},
   {id:'s4', name:'麦当劳(蓟州府君山店)', addr:'蓟州区府君山广场南',    dist:4.2, drive:true,  delivery:false, lat:40.0558, lng:117.4233}
+];
+/* 真实门店快照：2026-10-24 通过麦当劳 MCP query-nearby-stores 实测查询
+   （searchType=2 按位置、city=天津市、keyword=蓟州区、beType=1 到店自取），
+   以下字段均为 MCP 原始返回：storeCode/门店名/地址/距离(米)/营业时间/营业状态/预约支持。
+   注意：MCP 未返回经纬度（longitude/latitude 为 0），故距离展示用 MCP 返回值而非定位计算。 */
+var REAL_STORES_META = {
+  source: '麦当劳 MCP · query-nearby-stores',
+  query: '天津市 · 蓟州区（到店自取）',
+  fetchedAt: '2026-10-24'
+};
+var REAL_STORES = [
+  {id:'r1', storeCode:'1980128', name:'麦当劳天津渔阳南路餐厅', addr:'渔阳南路16号',
+   dist:0.17, mcpDist:170, drive:false, delivery:false, open:'07:00–23:00', business:true, reservation:true},
+  {id:'r2', storeCode:'1980269', name:'麦当劳天津蓟州万达广场餐厅', addr:'渔阳镇溪水路6号万达广场一楼',
+   dist:3.39, mcpDist:3385, drive:false, delivery:false, open:'07:00–23:00', business:true, reservation:true},
+  {id:'r3', storeCode:'1980278', name:'麦当劳天津天一绿海得来速餐厅',
+   addr:'渔阳镇翠湖东路北端东侧、山水颐城北侧天一绿海城(揽秀园)48号楼1F层东侧1号2号商铺',
+   dist:3.76, mcpDist:3757, drive:true, delivery:false, open:'07:00–23:00', business:false, reservation:false}
 ];
 var COUPONS = [
   {id:'c1', name:'满 30 减 6',  min:30, off:6},
@@ -2003,33 +2028,63 @@ function startStoreLive(){
   }
   storeTimer = setInterval(function(){ renderStores(); }, 20000); /* 心跳：刷新时间戳与排序 */
 }
+function storeCard(o, selId){
+  var s = o.s, tags = '';
+  if (o.real){
+    tags += '<span class="tag tag-blue">MCP 真实门店</span>';
+    if (s.business === false) tags += '<span class="tag tag-gray">暂停营业</span>';
+    if (s.drive) tags += '<span class="tag tag-yellow">得来速</span>';
+    if (s.reservation) tags += '<span class="tag tag-green">支持预约</span>';
+  } else {
+    if (s.delivery) tags += '<span class="tag tag-green">麦乐送</span>';
+    if (s.drive) tags += '<span class="tag tag-yellow">得来速</span>';
+  }
+  var dist;
+  if (o.real && s.mcpDist != null){
+    /* MCP 距离单位为米；≥1000m 用整数运算折算 km，避免浮点四舍五入偏差（3385m → 3.39km） */
+    dist = s.mcpDist >= 1000 ? (Math.round(s.mcpDist / 10) / 100) + 'km' : s.mcpDist + 'm';
+    dist += '<small class="dist-src">MCP 距离</small>';
+  } else {
+    dist = o.d.toFixed(1) + 'km';
+  }
+  var code = (o.real && s.storeCode)
+    ? '<small class="store-code">门店编号 ' + s.storeCode + ' · 营业 ' + s.open + '</small>' : '';
+  return '<button class="opt store-card'+(s.id===selId?' sel':'')+'" data-id="'+s.id+'">'
+    + '<span class="st-ic">'+icon('storefront')+'</span>'
+    + '<span class="tx"><b>'+s.name+'</b><small>'+s.addr+'</small>'
+    + '<span class="store-tags">'+tags+'</span>'+code+'</span>'
+    + '<span class="dist">'+dist+'</span>'
+    + '<span class="ck"></span></button>';
+}
 function renderStores(){
-  var list = STORES.filter(function(s){
+  /* 真实门店（MCP 快照）：仅到店场景展示——外送需要 delivery-query-stores + 地址ID，快照未包含 */
+  var real = (STATE.dining === 'delivery' ? [] : REAL_STORES)
+    .map(function(s){ return {s:s, d:storeDistance(s), real:true}; });
+  var demo = STORES.filter(function(s){
     if (STATE.dining === 'delivery') return s.delivery;
     return true;
-  }).map(function(s){ return {s:s, d:storeDistance(s)}; });
-  list.sort(function(a,b){ return a.d - b.d; });
+  }).map(function(s){ return {s:s, d:storeDistance(s), real:false}; });
+  real.sort(function(a,b){ return a.d - b.d; });
+  demo.sort(function(a,b){ return a.d - b.d; });
   var subMap = {delivery:'已按「麦乐送可配送」筛选', instore:'附近全部门店（到店核销）'};
-  $('#storeSub').textContent = subMap[STATE.dining] + '（' + list.length + ' 家）';
+  $('#storeSub').textContent = subMap[STATE.dining] + '（真实 ' + real.length + ' 家 + 演示 ' + demo.length + ' 家）';
   $('#storeStatus').innerHTML = STATE.userPos
     ? '<span class="live-dot"></span>' + icon('pin') + ' <b>已实时定位</b> · 更新于 ' + fmtClock()
-    : icon('pin') + ' 未获得定位授权，展示演示距离 · 更新于 ' + fmtClock();
-  var html = '';
+    : icon('pin') + ' 未获得定位授权 · 真实门店距离取 MCP 返回值 · 更新于 ' + fmtClock();
+  var all = real.concat(demo);
   /* 先定下有效选中项，保证默认第一个门店也有选中态（否则会出现"没选却能下一步"） */
   var selId = STATE.storeId;
-  if (list.length && (!selId || !list.some(function(o){ return o.s.id === selId; }))) selId = list[0].s.id;
-  list.forEach(function(o){
-    var s = o.s;
-    html += '<button class="opt store-card'+(s.id===selId?' sel':'')+'" data-id="'+s.id+'">'
-      + '<span class="st-ic">'+icon('storefront')+'</span>'
-      + '<span class="tx"><b>'+s.name+'</b><small>'+s.addr+'</small>'
-      + '<span class="store-tags">'
-      + (s.delivery?'<span class="tag tag-green">麦乐送</span>':'')
-      + (s.drive?'<span class="tag tag-yellow">得来速</span>':'')
-      + '</span></span>'
-      + '<span class="dist">'+o.d.toFixed(1)+'km</span>'
-      + '<span class="ck"></span></button>';
-  });
+  if (all.length && (!selId || !all.some(function(o){ return o.s.id === selId; }))) selId = all[0].s.id;
+  var html = '';
+  if (real.length){
+    html += '<div class="store-group">真实门店 · ' + REAL_STORES_META.source + '（' + REAL_STORES_META.fetchedAt
+      + ' 查询「' + REAL_STORES_META.query + '」）</div>';
+    html += real.map(function(o){ return storeCard(o, selId); }).join('');
+  }
+  if (demo.length){
+    html += '<div class="store-group">演示门店（坐标与距离为演示数据，用于完整体验）</div>';
+    html += demo.map(function(o){ return storeCard(o, selId); }).join('');
+  }
   $('#storeList').innerHTML = html;
   STATE.storeId = selId || null;
   $$('#storeList .opt').forEach(function(btn){
@@ -2266,6 +2321,7 @@ function swapOne(i, dir){
 }
 function byIdStore(id){
   for (var i=0;i<STORES.length;i++) if (STORES[i].id===id) return STORES[i];
+  for (var j=0;j<REAL_STORES.length;j++) if (REAL_STORES[j].id===id) return REAL_STORES[j];
   return null;
 }
 
@@ -2273,7 +2329,9 @@ function byIdStore(id){
 function renderOrder(){
   var store = byIdStore(STATE.storeId);
   var diningTxt = STATE.dining === 'delivery' ? icon('scooter')+' 麦乐送' : icon('storefront')+' 到店';
-  $('#orderStoreSub').innerHTML = (store?store.name:'-') + ' · ' + diningTxt + (STATE.style==='group'?' · '+icon('ticket')+' 团购':'');
+  var storeTxt = store ? store.name : '-';
+  if (store && store.storeCode) storeTxt += ' <small class="store-code-inline">（' + store.storeCode + ' · MCP 真实门店 · 演示下单）</small>';
+  $('#orderStoreSub').innerHTML = storeTxt + ' · ' + diningTxt + (STATE.style==='group'?' · '+icon('ticket')+' 团购':'');
   $('#orderAddrCard').style.display = STATE.dining === 'delivery' ? '' : 'none';
   var html = '';
   var subtotal = 0;

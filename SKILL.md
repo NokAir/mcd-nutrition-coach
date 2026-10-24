@@ -59,7 +59,7 @@ awk '/^<script>$/{f=1;next} /^<\/script>$/{f=0} f' index.html > /tmp/app.js && n
 - 计算层是**纯函数**（不碰 DOM），渲染层只读计算结果。
 
 ### 2. 数据表与算法（必须原样，否则推荐结果与测试断言漂移）
-- 6 张表：`MENU`（mains/sides/drinks/desserts，字段 `id/name/kcal/protein/fat/carb/sodium/price/tags`）、`MEAL_TYPES`（5 类，`kcal:[lo,hi]`+`proteinMin`）、`TASTES`/`AVOIDS`、`GROUP_DEALS`、`STORES`、`COUPONS`。**原样内容在 `SYSTEM_PROMPT.md` 4.1–4.6，逐字照抄。**
+- 6 张表：`MENU`（mains/sides/drinks/desserts，字段 `id/name/kcal/protein/fat/carb/sodium/price/tags`）、`MEAL_TYPES`（5 类，`kcal:[lo,hi]`+`proteinMin`）、`TASTES`/`AVOIDS`、`GROUP_DEALS`、`STORES`、`COUPONS`。**原样内容在 `SYSTEM_PROMPT.md` 4.1–4.6，逐字照抄。** 另有一张 `REAL_STORES` 真实门店快照表（2026-10-24 由麦当劳 MCP `query-nearby-stores` 实测查询「天津市·蓟州区」返回，含 storeCode/营业时间/营业状态；门店页与演示门店分区展示、外送模式下自动隐藏——快照无配送数据，不冒充）。
 - `bmr = 10w + 6.25h − 5age + (female ? −161 : +5)`；`mealBudget = clamp(round(bmr*1.375*0.35/50)*50, 450, 1100)`，`skip` 返回 700。
 - 打分越小越优：热量偏离 + `sodium*0.004`（同分优先低钠）+ 蛋白奖励 + 口味加分 − 价格项。
 - `solvePerson` 5 轮宽松递进（严格 → 放蛋白 → 区间 ±15% → ±30% → 全放开），取 Top6。
