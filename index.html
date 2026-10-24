@@ -1514,16 +1514,27 @@ var Wheel = (function(){
     return out;
   }
   function idxOfVal(vals, v){ for (var i = 0; i < vals.length; i++) if (vals[i] === v) return i; return -1; }
-  /* 窗口化渲染：默认只画当前项 ±BUF；显式传入 [s,e] 时按区间画（吸附动画用，防止滑到半路露出空白） */
+  /* 窗口化渲染：默认只画当前项 ±BUF；显式传入 [s,e] 时按区间画（吸附动画用，防止滑到半路露出空白）。
+     节点池化：只增删/更新既有 .wheel-item，绝不在手势进行中 innerHTML 整体重建——
+     真实手机（尤其 iOS）在指针手势期间销毁目标节点会丢指针事件、出现闪断空白 */
   function renderWindow(el, s, e){
     var list = el._list, vals = el._vals, idx = el._idx;
     if (s == null){ s = Math.max(0, idx - BUF); e = Math.min(vals.length - 1, idx + BUF); }
     if (el._ws === s && el._we === e && el._widx === idx && el._wlen === vals.length) return;
-    var html = '';
-    for (var i = s; i <= e; i++){
-      html += '<div class="wheel-item' + (i === idx ? ' on' : '') + '" data-v="' + vals[i] + '" style="top:' + (i * ITEM_H) + 'px">' + vals[i] + '</div>';
+    var need = e - s + 1, pool = el._pool || (el._pool = []), i, it, v, top, on;
+    while (pool.length < need){
+      it = document.createElement('div');
+      it.className = 'wheel-item';
+      list.appendChild(it);
+      pool.push(it);
     }
-    list.innerHTML = html;
+    while (pool.length > need) list.removeChild(pool.pop());
+    for (i = 0; i < need; i++){
+      it = pool[i]; v = vals[s + i]; top = (s + i) * ITEM_H; on = (s + i) === idx;
+      if (it._v !== v){ it._v = v; it.dataset.v = v; it.textContent = v; }
+      if (it.style.top !== top + 'px') it.style.top = top + 'px';
+      if (it._on !== on){ it._on = on; it.classList.toggle('on', on); }
+    }
     el._ws = s; el._we = e; el._widx = idx; el._wlen = vals.length;
     el.setAttribute('aria-valuenow', String(vals[idx]));
     el.setAttribute('aria-valuetext', vals[idx] + ' ' + (el.dataset.unit || ''));
@@ -1574,11 +1585,13 @@ var Wheel = (function(){
     paint(el, false);
     commit(el, true);
 
-    var sy = 0, ly = 0, lt = 0, vel = 0, moved = false, active = false, pid = null, idx0 = 0;
+    var sy = 0, ly = 0, lt = 0, lastMoveT = 0, vel = 0, moved = false, active = false, pid = null, idx0 = 0;
     el.addEventListener('pointerdown', function(e){
+      if (active) return;                       /* 多指/误触：只认第一根手指，避免拖拽基准被重置 */
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       active = true; moved = false; pid = e.pointerId;
-      sy = ly = e.clientY; lt = Date.now(); vel = 0; el._drag = 0;
+      var now = Date.now();
+      sy = ly = e.clientY; lt = now; lastMoveT = now; vel = 0; el._drag = 0;
       idx0 = el._idx;                       /* 记录起拖时的索引，作为连续跟随的基准 */
       el._vis = el._idx;
       el.classList.add('dragging');
@@ -1591,14 +1604,17 @@ var Wheel = (function(){
       /* 索引实时跟随手指：raw 为连续目标格位，手指上滑 → 索引增大 */
       var raw = idx0 - (cy - sy) / ITEM_H;
       var lo = 0, hi = el._vals.length - 1, vis = raw;
-      if (raw < lo) vis = lo + (raw - lo) * .32;              /* 顶部橡皮筋 */
-      else if (raw > hi) vis = hi + (raw - hi) * .32;         /* 底部橡皮筋 */
+      /* 越界橡皮筋：饱和式阻尼，最多拉出半格——保证选中项始终压在可视带内，
+        否则深拉时选中数字被整体拉出滚轮，看起来就是"数据被隐藏" */
+      if (raw < lo) vis = lo - 0.5 * (1 - Math.exp(-(lo - raw) / 1.2));
+      else if (raw > hi) vis = hi + 0.5 * (1 - Math.exp(-(raw - hi) / 1.2));
       var ni = Math.max(lo, Math.min(hi, Math.round(vis)));
       el._vis = vis;
-      if (ni !== el._idx){ el._idx = ni; renderWindow(el); }  /* 只有跨过整数格才重建 DOM */
+      if (ni !== el._idx){ el._idx = ni; renderWindow(el); }  /* 只有跨过整数格才更新 DOM */
       el._drag = (ni - vis) * ITEM_H;                         /* 亚像素平滑余量，保证连续不跳格 */
       applyTransform(el, false);
       var now = Date.now();
+      lastMoveT = now;
       if (now - lt > 8){ vel = (cy - ly) / (now - lt); lt = now; }
       ly = cy;
     });
@@ -1607,10 +1623,14 @@ var Wheel = (function(){
       active = false;
       el.classList.remove('dragging');
       /* 惯性投影：按当前速度再滑 130ms（折算成格）。
-         注意符号：raw = idx - (cy-sy)/ITEM_H，手指上滑（cy 变小）时索引增大，
-         而 vel 是 cy 方向的速度，故投影要取负号 */
+         注意符号：raw = idx - (cy-sy)/ITEM_H，vel 是 clientY 方向的速度，故投影要取负号。
+         速度按「距最后一次移动的时长」指数衰减：手指停住后再松手不产生幽灵惯性
+         （否则陈旧速度会让滚轮凭空跳出好几格，用户看到的就是数据乱飞/丢失） */
       var before = el._idx;
-      var proj = (el._vis == null ? el._idx : el._vis) - vel * 130 / ITEM_H;
+      var v = vel * Math.exp(-(Date.now() - lastMoveT) / 120);
+      var proj = (el._vis == null ? el._idx : el._vis) - v * 130 / ITEM_H;
+      if (proj > el._idx + 20) proj = el._idx + 20;   /* 限制单次投影跨度，防异常大速度飞出 */
+      if (proj < el._idx - 20) proj = el._idx - 20;
       el._vis = null; el._drag = 0;
       setIdx(el, Math.round(proj), true, false, before);
       /* 拖动过程中索引已实时变化但没有落库；若最终值与拖动末尾相同，这里补一次提交 */
@@ -1618,6 +1638,7 @@ var Wheel = (function(){
     }
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', up);
+    el.addEventListener('lostpointercapture', up);  /* 捕获意外丢失（节点被替换等）时兜底收尾 */
     /* 桌面鼠标滚轮：到头时不拦截，交给页面继续滚动 */
     el.addEventListener('wheel', function(e){
       var d = e.deltaY > 0 ? 1 : (e.deltaY < 0 ? -1 : 0);

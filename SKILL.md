@@ -1,6 +1,6 @@
 ---
 name: mcd-nutrition-coach
-description: 麦当劳「麦麦营养点餐助手」参赛作品的完整复刻 / 改造 / 部署技能。当用户提到：麦麦营养点餐助手、麦当劳程序员创意开发大赛作品、营养点餐推荐原型、按身体数据推荐麦当劳一餐、Mifflin-St Jeor 一餐热量预算、多人分别推荐再合并一单、自动匹配满减券的点餐演示、Apple 模糊玻璃单文件 HTML、iOS 式滚轮选择器、要把该系统发布成公开网址或做成 GitHub skill 仓库时使用。覆盖：单文件零依赖架构（ES5、三级 backdrop-filter 更透玻璃 + 极光斑、Motion 动效层、Web Audio 9 音效、Canvas 小恐龙、57 枚自绘 SVG 图标）、6 张必须逐字照抄的数据表、5 轮宽松递进推荐算法与打分公式、8 步流程与加载节奏、61/71/52/17 四层测试法（含 jsdom 与 puppeteer 真实触屏脚本）、索引实时跟随手指的滚轮拖拽契约、sites 公网发布与 GitHub 仓库化步骤、12 条历史踩坑。
+description: 麦当劳「麦麦营养点餐助手」参赛作品的完整复刻 / 改造 / 部署技能。当用户提到：麦麦营养点餐助手、麦当劳程序员创意开发大赛作品、营养点餐推荐原型、按身体数据推荐麦当劳一餐、Mifflin-St Jeor 一餐热量预算、多人分别推荐再合并一单、自动匹配满减券的点餐演示、Apple 模糊玻璃单文件 HTML、iOS 式滚轮选择器、要把该系统发布成公开网址或做成 GitHub skill 仓库时使用。覆盖：单文件零依赖架构（ES5、三级 backdrop-filter 更透玻璃 + 极光斑、Motion 动效层、Web Audio 9 音效、Canvas 小恐龙、57 枚自绘 SVG 图标）、6 张必须逐字照抄的数据表、5 轮宽松递进推荐算法与打分公式、8 步流程与加载节奏、61/71/52/21 四层测试法（含 jsdom 与 puppeteer 真实触屏脚本）、索引实时跟随手指 + 饱和橡皮筋 + 速度衰减 + 节点池的滚轮拖拽契约、sites 公网发布与 GitHub 仓库化步骤、14 条历史踩坑。
 agent_created: true
 ---
 
@@ -73,7 +73,7 @@ awk '/^<script>$/{f=1;next} /^<\/script>$/{f=0} f' index.html > /tmp/app.js && n
 ### 4. 视觉与交互三层
 - **三级 Apple 玻璃（v3 更透）**：卡片/面板 `blur(26px) saturate(180%) brightness(1.02)` + 44% 白釉 + 1px 内高光；控件 `blur(16–18px) saturate(170%)` + 34% 白釉 + 白描边；顶栏/底栏 `blur(20–24px)` 滚动后加深。**玻璃越透，背后的光斑必须越亮**：`.aurora` 四个模糊光斑（黄/红/橙，opacity .9、`blur(64px)`，24–36s 漂移）当底色，否则 `backdrop-filter` 看不见；白釉从 66–80% 降到 28–44% 后，极光透明度与模糊半径要同步上调。只借鉴 `shuding/liquid-glass` 的边缘高光，**不要**全屏 `feDisplacementMap`（手机掉帧、小字发糊）。
 - **`Motion` IIFE**：入场错峰（`--i` × 42ms）、滚动玻璃态、水波纹、桌面追光、价格数字滚动、营养条生长、光泽扫过、成功光环、桌面悬停抬升；`prefers-reduced-motion` 全部降级。
-- **滚轮选择器**（年龄 5–100 / 身高 100–220 / 体重 30–200，默认 25/170/65）：**索引实时跟随手指**——`pointermove` 算 `raw = idx0 - (cy - sy)/ITEM_H`，`ni = clamp(round(vis))` 跨过整数格才重建 DOM，同时用亚像素 `drag = (ni - vis)*ITEM_H` 平滑跟随；越界 0.32 橡皮筋；松手惯性 `proj = vis - vel*130/ITEM_H`（**符号必须取负**，`vel` 是 clientY 方向）吸附；鼠标滚轮（边界 return 且不 `preventDefault`）、点击选项、键盘 ↑↓/PageUp·Down/Home·End；**窗口化渲染 + 缓存只画 ±3 项**，动画渲染 `fromIdx→idx` 整段避免空白中心带；松手必须补 `if (el._idx === before) commit(el, false)` 否则拖完值不落 `STATE`；选中值写隐藏 `input.p-num` 派发 `input` 走既有链路，数据结构不变；`role="spinbutton"` + `aria-valuenow`。
+- **滚轮选择器**（年龄 5–100 / 身高 100–220 / 体重 30–200，默认 25/170/65）：**索引实时跟随手指**——`pointermove` 算 `raw = idx0 - (cy - sy)/ITEM_H`，`ni = clamp(round(vis))` 跨过整数格才更新 DOM，同时用亚像素 `drag = (ni - vis)*ITEM_H` 平滑跟随；**越界橡皮筋用饱和阻尼**（`lo - 0.5*(1-exp(-(lo-raw)/1.2))`，最多拉出半格——选中项永远压在可视带内，深拉时数据不会被拉出滚轮）；松手惯性 `proj = vis - v*130/ITEM_H`（**符号取负**，`vel` 是 clientY 方向；**速度按停顿时长指数衰减** `v = vel*exp(-dt/120)`，停住再松手不跳格；投影钳制 ±20 格）；鼠标滚轮（边界 return 且不 `preventDefault`）、点击选项、键盘 ↑↓/PageUp·Down/Home·End；**窗口化渲染 + 节点池**（只更新既有 `.wheel-item` 的 值/top/on，**绝不在手势进行中 innerHTML 整体重建**——iOS 会丢指针事件）；动画渲染 `fromIdx→idx` 整段；松手补 `if (el._idx === before) commit(el, false)`；多指误触忽略第二根手指、`lostpointercapture` 兜底 `up()`；选中值写隐藏 `input.p-num` 派发 `input` 走既有链路，数据结构不变；`role="spinbutton"` + `aria-valuenow`。
 - **`SFX`**：Web Audio 纯合成 9 音（tap/select/next/back/coin/success/error/jump/hit），首次手势解锁、45ms 限流、reduced-motion 自动静音、localStorage 持久化、无 AudioContext 静默降级。
 - **图标**：57 枚自绘 SVG（`ICONS` + `icon()`，24 栅格/1.7px 描边/`currentColor`），全站零 emoji；餐品前配内嵌 SVG 食物插画。
 
@@ -82,8 +82,9 @@ awk '/^<script>$/{f=1;next} /^<\/script>$/{f=0} f' index.html > /tmp/app.js && n
 1. **冒烟 61/61**：计算层纯函数（预算/打分/换单品/压预算/用券/团购派生值）。
 2. **集成 71/71**（jsdom，`runScripts:'dangerously'`，url 用 `http://localhost/`）：场景 A 自定义 2 人麦乐送、B 团购 3 人、D 1 人极简、F 分享已移除；每场景断言零运行时错误。
 3. **滚轮专项 52/52**：渲染/键盘/滚轮/点击/拖拽/多人独立/值保留/reduced-motion/极端值全流程。
-4. **拖拽专项 17/17**（`wheel_drag_test.js`）：30 步连续拖拽无空白、快甩惯性方向、100 帧内 DOM 重建 ≤20、拖完值落 `STATE`（多人独立）、橡皮筋回弹。
-5. **真实浏览器**（puppeteer-core + Chrome，`page.touchscreen` 真触屏）：8 步零错误；拖滚轮时页面 `scrollY` 不变、20 次采样无空白中心带；玻璃 `backdrop-filter` 计算值生效；3 秒页不弹游戏、10 秒页弹、下单页 2 秒不弹；截图归档。
+4. **拖拽专项 21/21**（`wheel_drag_test.js`）：30 步连续拖拽无空白、快甩惯性方向、100 帧内 DOM 更新 ≤20、拖完值落 `STATE`（多人独立）、橡皮筋回弹；**新增回归**：深拉 600px 橡皮筋位移 ≤ 半格（选中数字不被拉出滚轮）、深拉全程中心带有数据、拖拽中 item 节点引用稳定（不整体重建 DOM）、停住 400ms 后松手落点=停留处（无幽灵惯性）。
+5. **真实节奏触屏复现**（`wheel_repro_real.js`，puppeteer 真触屏 + 16ms 帧节奏）：慢拖中含停顿、停顿 400ms 松手、边缘外 200px 深拉、120ms 内连甩两次——四场景中心带全程有数据、无空文本、scrollY 不变、零运行时错误。
+6. **真实浏览器**（puppeteer-core + Chrome，`page.touchscreen` 真触屏）：8 步零错误；拖滚轮时页面 `scrollY` 不变、20 次采样无空白中心带；玻璃 `backdrop-filter` 计算值生效；3 秒页不弹游戏、10 秒页弹、下单页 2 秒不弹；截图归档。
 
 > jsdom 无 PointerEvent：用普通 `Event` + 手工补 `clientY/pointerId/pointerType` 属性即可模拟拖拽。
 
@@ -123,12 +124,14 @@ gh repo view --web          # 打开仓库页
 4. `scoreOption` 低钠项符号写反 → 高钠组合反而优先。
 5. `btnNext` 的 `finally` 无条件解禁 → 未选录入方式也能跳页；应记录 `startStep`，仅未跳转时恢复。
 6. 进度条把 `threshold` 当时长 → 3 秒页变 160 秒。
-7. 拖滚轮时数据变空白、卡顿不连贯：根因是拖拽中 `idx` 不动 → 窗口固定在 ±3 → 拖出 3 格露出未渲染空白带，且每帧重建整个 `.wheel-list` DOM。正确做法：**索引实时跟随手指**（跨整数格才重建 DOM）+ 亚像素 `drag` 偏移 + `renderWindow` 缓存 + 动画渲染 `fromIdx→idx` 整段。
-8. 松手后年龄/身高/体重不变：`setIdx` 只在索引变化时 `commit`，而惯性投影后的索引常等于拖拽末索引 → 值不落 `STATE`。`up()` 里必须补 `if (el._idx === before) commit(el, false)`。
-9. 惯性方向甩反：`proj` 写成 `vis + vel*130/ITEM_H`。`raw = idx0 - (cy - sy)/ITEM_H` 与 clientY 反向，**必须取负号** `vis - vel*130/ITEM_H`。
-10. 玻璃背后没有彩色光斑 → `backdrop-filter` 完全看不见；玻璃调更透时不同步提亮极光 → 文字发飘不可读（白釉 66–80% → 28–44%，极光 opacity .9 / blur 64px 同步上调）。
-11. 门店默认选中在 HTML 拼好后才赋值 → 第一张卡无选中态；先算 `selId` 再渲染。
-12. 换一批面板徽标缺全局尺寸约束 → 被撑成整块大红 M。
+7. 拖滚轮数据变空白、卡顿不连贯：根因是拖拽中 `idx` 不动 → 窗口固定在 ±3 → 拖出 3 格露出未渲染空白带，且每帧重建整个 `.wheel-list` DOM。正确做法：**索引实时跟随手指**（跨整数格才更新 DOM）+ 亚像素 `drag` 偏移 + 节点池（只更新既有节点，不 innerHTML 重建）+ 动画渲染 `fromIdx→idx` 整段。
+8. **拖到边缘继续拉，选中数字被拉出滚轮（数据被隐藏）**：橡皮筋用线性 `0.32` 系数不设上限，深拉 200px 时选中项整体移出可视带。必须用饱和阻尼且**最多拉出半格**：`vis = lo - 0.5*(1 - exp(-(lo-raw)/1.2))`。
+9. 松手后年龄/身高/体重不变：`setIdx` 只在索引变化时 `commit`，而惯性投影后的索引常等于拖拽末索引 → 值不落 `STATE`。`up()` 里必须补 `if (el._idx === before) commit(el, false)`。
+10. **幽灵惯性：手指停住几秒再松手，滚轮凭空跳出好几格**：`up()` 直接用了最后一次 `pointermove` 的陈旧速度。必须按停顿时长指数衰减：`v = vel * exp(-(Date.now()-lastMoveT)/120)`，并把投影钳制在 ±20 格内。
+11. 惯性方向甩反：`proj` 写成 `vis + vel*130/ITEM_H`。`raw = idx0 - (cy - sy)/ITEM_H` 与 clientY 反向，**必须取负号** `vis - vel*130/ITEM_H`。
+12. 玻璃背后没有彩色光斑 → `backdrop-filter` 完全看不见；玻璃调更透时不同步提亮极光 → 文字发飘不可读（白釉 66–80% → 28–44%，极光 opacity .9 / blur 64px 同步上调）。
+13. 门店默认选中在 HTML 拼好后才赋值 → 第一张卡无选中态；先算 `selId` 再渲染。
+14. 换一批面板徽标缺全局尺寸约束 → 被撑成整块大红 M。
 
 ## 扩展方向
 
