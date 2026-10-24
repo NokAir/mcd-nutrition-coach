@@ -1,0 +1,10 @@
+{
+  "name": "mcd-nutrition-coach-live",
+  "version": "1.0.0",
+  "private": true,
+  "description": "麦麦营养点餐助手 · MCP 实时代理（零依赖）：门店实时查询 / 实时核价 / 真实下单跳转支付",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

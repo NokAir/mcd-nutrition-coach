@@ -47,6 +47,8 @@ awk '/^<script>$/{f=1;next} /^<\/script>$/{f=0} f' index.html > /tmp/app.js && n
 | `MCP_INTEGRATION.md` | MCP Server / Tool / 调用流程 / 业务价值 |
 | `CONTEST_DECLARATION.md` | 官方参赛声明（未改动） |
 | `mcp-config.example.json` | MCP 配置示例（仅环境变量占位符，**无真实 Token**） |
+| `server.js` | **实时模式服务端代理**（零依赖）：持有 MCP Token，转发 `query-nearby-stores`/`query-meals`/`calculate-price`/`create-order` |
+| `package.json` / `.gitignore` | 代理启动脚本；`.gitignore` 屏蔽 `mcp-token.txt` |
 | `screenshots/` | 无头浏览器走查截图（玻璃/滚轮/各步骤） |
 
 ## 核心实现要点（改代码前必读）
@@ -57,6 +59,7 @@ awk '/^<script>$/{f=1;next} /^<\/script>$/{f=0} f' index.html > /tmp/app.js && n
 - **分区顺序**：设计令牌 → `ICONS`/`icon()` → `SFX` → 6 张数据表 → 工具层 → 计算层纯函数 → `STEPS/STATE/go()` → 滚轮 `Wheel` → 各页渲染 → 加载层 → 小恐龙 → `Motion` → 事件绑定 → `go(0)`。
   `ICONS` 必须早于所有数据表（`MEAL_TYPES` 定义时即调用 `icon()`；`var` 提升不提升赋值，顺序错会 TypeError 整页白屏）。
 - 计算层是**纯函数**（不碰 DOM），渲染层只读计算结果。
+- **页面永远不接触 MCP Token**：Token 只存在于 `server.js`（env `MCD_MCP_TOKEN` 或 gitignored `mcp-token.txt`）。页面只发相对路径 `api/*`，探测到 `api/health` 命中才进实时模式；`file://` 打开时**必须跳过探测**（否则控制台会多一条 CORS 报错），保持快照 + 演示模式，行为与静态版完全一致。
 
 ### 2. 数据表与算法（必须原样，否则推荐结果与测试断言漂移）
 - 6 张表：`MENU`（mains/sides/drinks/desserts，字段 `id/name/kcal/protein/fat/carb/sodium/price/tags`）、`MEAL_TYPES`（5 类，`kcal:[lo,hi]`+`proteinMin`）、`TASTES`/`AVOIDS`、`GROUP_DEALS`、`STORES`、`COUPONS`。**原样内容在 `SYSTEM_PROMPT.md` 4.1–4.6，逐字照抄。** 另有一张 `REAL_STORES` 真实门店快照表（2026-10-24 由麦当劳 MCP `query-nearby-stores` 实测查询「天津市·蓟州区」返回，含 storeCode/营业时间/营业状态；门店页与演示门店分区展示、外送模式下自动隐藏——快照无配送数据，不冒充）。
@@ -77,6 +80,14 @@ awk '/^<script>$/{f=1;next} /^<\/script>$/{f=0} f' index.html > /tmp/app.js && n
 - **`SFX`**：Web Audio 纯合成 9 音（tap/select/next/back/coin/success/error/jump/hit），首次手势解锁、45ms 限流、reduced-motion 自动静音、localStorage 持久化、无 AudioContext 静默降级。
 - **图标**：57 枚自绘 SVG（`ICONS` + `icon()`，24 栅格/1.7px 描边/`currentColor`），全站零 emoji；餐品前配内嵌 SVG 食物插画。
 
+### 4.5 实时模式（server.js + 页面 LIVE 分支）
+- 端点：`GET /api/health`（`{live:true}` 即进实时模式）、`GET /api/stores?lat&lng`、`GET /api/menu?store`、`POST /api/quote`、`POST /api/order`。下单默认每 IP 每小时 3 单（`MCD_ORDER_LIMIT` 可调）。
+- **MCP 返回体不是纯 JSON**：`content[0].text` 是「API Response Information」Markdown 包裹 + 内嵌 JSON，必须做花括号配平扫描提取（`extractJson()`），直接 `JSON.parse` 必崩。
+- 门店经纬度：MCP 不返回 → 用「3 个 MCP 距离 × Photon 街道/地标坐标」三角交叉验证反推；**国内用 Photon（`photon.komoot.io`），Nominatim 不通**。
+- 演示菜单 → 真实菜单映射用归一化名称 + 子串兜底，映射不到的餐品在核价处如实标注「该店无在售商品，未计入」。
+- `create-order` 前必须二次确认弹窗；成功页展示真实订单号 + 2 秒倒计时跳 `payH5Url`，并保留「立即前往支付 / 留在本页」兜底。
+- MCP 平台侧有**当日下单额度上限**（返回「今日下单数已经上限」）：翻译成人话 + 提供「改用演示模式完成体验」降级（`sessionStorage.mcdQuotaOut`），流程不能中断。
+
 ## 测试（三层，不跑完不算完成）
 
 1. **冒烟 61/61**：计算层纯函数（预算/打分/换单品/压预算/用券/团购派生值）。
@@ -84,7 +95,9 @@ awk '/^<script>$/{f=1;next} /^<\/script>$/{f=0} f' index.html > /tmp/app.js && n
 3. **滚轮专项 52/52**：渲染/键盘/滚轮/点击/拖拽/多人独立/值保留/reduced-motion/极端值全流程。
 4. **拖拽专项 21/21**（`wheel_drag_test.js`）：30 步连续拖拽无空白、快甩惯性方向、100 帧内 DOM 更新 ≤20、拖完值落 `STATE`（多人独立）、橡皮筋回弹；**新增回归**：深拉 600px 橡皮筋位移 ≤ 半格（选中数字不被拉出滚轮）、深拉全程中心带有数据、拖拽中 item 节点引用稳定（不整体重建 DOM）、停住 400ms 后松手落点=停留处（无幽灵惯性）。
 5. **真实节奏触屏复现**（`wheel_repro_real.js`，puppeteer 真触屏 + 16ms 帧节奏）：慢拖中含停顿、停顿 400ms 松手、边缘外 200px 深拉、120ms 内连甩两次——四场景中心带全程有数据、无空文本、scrollY 不变、零运行时错误。
-6. **真实浏览器**（puppeteer-core + Chrome，`page.touchscreen` 真触屏）：8 步零错误；拖滚轮时页面 `scrollY` 不变、20 次采样无空白中心带；玻璃 `backdrop-filter` 计算值生效；3 秒页不弹游戏、10 秒页弹、下单页 2 秒不弹；截图归档。
+6. **真实门店 10/10**（`real_store_verify.js`，puppeteer 打开 `file://` 版）：真实/演示分组、门店编号、MCP 距离来源标注、默认选中、点击选中、订单页联动、外送模式下真实门店隐藏、零运行时错误。
+7. **实时模式端到端 14/14**（`live_e2e.js`，puppeteer + 本地 `server.js`，`overridePermissions(origin,['geolocation'])` + `setGeolocation`）：L1 探测激活 → L2 实时门店 → L3 分组标题 → L4「实时」徽标 → L5 直线距离 → L6 状态栏 → L7 区域反解 → L8 `calculate-price` 实时核价 → L9 按钮文案 → L10 确认弹窗 → L11 真实订单号 → L12 支付链接 → L13 零运行时错误（额度触顶时改测「人话报错 + 演示降级」）。
+8. **真实浏览器**（puppeteer-core + Chrome，`page.touchscreen` 真触屏）：8 步零错误；拖滚轮时页面 `scrollY` 不变、20 次采样无空白中心带；玻璃 `backdrop-filter` 计算值生效；3 秒页不弹游戏、10 秒页弹、下单页 2 秒不弹；截图归档。
 
 > jsdom 无 PointerEvent：用普通 `Event` + 手工补 `clientY/pointerId/pointerType` 属性即可模拟拖拽。
 
@@ -92,11 +105,24 @@ awk '/^<script>$/{f=1;next} /^<\/script>$/{f=0} f' index.html > /tmp/app.js && n
 
 用户要求「变成可以公开访问的网址」时，用 sites 部署（静态项目，无需服务器）：
 
+**纯演示（无真实数据）**用静态部署：
+
 ```json
 { "action": "deploy", "directory": "<项目绝对路径>", "language": "static",
   "appName": "麦麦营养点餐助手", "domainPrefix": "mcd-nutrition-coach",
   "userAskedToPublish": true }
 ```
+
+**要真实门店/真实核价/真实下单**必须部署 Node 服务（`server.js`，页面靠它拿 Token）：
+
+```json
+{ "action": "deploy", "directory": "<项目绝对路径>", "language": "node",
+  "appName": "麦麦营养点餐助手", "domainPrefix": "mcd-nutrition-coach",
+  "userAskedToPublish": true }
+```
+
+- 部署前确认 `mcp-token.txt` 已在项目目录（或配置 `MCD_MCP_TOKEN` 环境变量），否则 `api/health` 返回 `live:false`，页面会静默回到演示模式。
+- 公开链接上请保留下单限流（默认 3 单/IP/小时），避免 Token 被滥用。
 
 - 仅当用户在**当轮消息**里明确要求发布时才传 `userAskedToPublish: true`；本地改代码不等于要发布，改完先问。
 - 成功后给 `shareLink`，并告知管理入口「设置—数据管理—应用」。
@@ -132,7 +158,14 @@ gh repo view --web          # 打开仓库页
 12. 玻璃背后没有彩色光斑 → `backdrop-filter` 完全看不见；玻璃调更透时不同步提亮极光 → 文字发飘不可读（白釉 66–80% → 28–44%，极光 opacity .9 / blur 64px 同步上调）。
 13. 门店默认选中在 HTML 拼好后才赋值 → 第一张卡无选中态；先算 `selId` 再渲染。
 14. 换一批面板徽标缺全局尺寸约束 → 被撑成整块大红 M。
+15. **把 MCP Token 写进静态页** = 公开泄露 + 浏览器直连被 CORS 拦；真实接入必须走 `server.js` 代理，页面只发相对路径。
+16. **直接 `JSON.parse` MCP 返回文本**必崩：返回是 Markdown 包裹 + 内嵌 JSON，用花括号配平扫描提取（`extractJson()`）。
+17. 国内网络 Nominatim 反解超时 → 换 Photon（`https://photon.komoot.io`），返回中文行政区划；直辖市要补「市」（天津 → 天津市）再查门店。
+18. `file://` 下探测 `api/health` → 控制台多一条 CORS 报错，实时门店专项测试会因「非零运行时错误」失败。必须 `location.protocol === 'file:'` 时直接跳过探测。
+19. 弹窗容器是 `#modalWrap`（不是 `#modal` / `.modal`），按钮在 `#modalActions` 里 —— 写自动化测试选择器时别猜。
+20. 麦当劳 MCP 有**当日下单额度上限**：「定位不准/不跳支付页」类问题排查前，先看 `api/order` 返回是不是「今日下单数已经上限」，别把平台限额当成代码 bug 反复改。
+21. 页面缺 favicon → 浏览器请求 `/favicon.ico` 产生 404，会让「零运行时错误」断言失败；用内联 SVG data URI `<link rel="icon">` 解决。
 
 ## 扩展方向
 
-真实 MCP 接入（Node 服务端持 Token，前端 fetch）、菜单热更新、多目标营养模型（钠/糖/纤维）、PWA 化、拼单房间、多品牌数据包复用。三条硬约束不破坏：计算层纯函数边界、`Option` 六项=单品求和、前端零 Token 零直连。
+菜单热更新（服务端缓存 + 版本号）、多目标营养模型（钠/糖/纤维）、PWA 化、拼单房间、多品牌数据包复用；真实链路已落地（Node 服务端持 Token，前端相对路径 fetch）。三条硬约束不破坏：计算层纯函数边界、`Option` 六项=单品求和、前端零 Token 零直连。

@@ -4,6 +4,9 @@
 <meta charset="UTF-8" data-page-node-id="ApN11wwejgzp0UnHKoKudN">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" data-page-node-id="gyphsJFrBbFUz50YUbHO48">
 <meta name="theme-color" content="#DA291C" data-page-node-id="FJ464n1BPpEzK6qJbGEGUk">
+<meta name="description" content="麦麦营养点餐助手 — 按身高体重算一餐热量预算，多人分别推荐再合并一单，接入麦当劳 MCP 真实门店与真实核价">
+<!-- 内联 SVG 图标：避免浏览器默认请求 /favicon.ico 产生 404（控制台零报错要求） -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23DA291C'/%3E%3Cpath d='M14 44c0-11 8-20 18-20 3.6 0 6.6 1 9 2.4V18h6v10.6c1.7 2.5 3 5.2 3 8.4 0-3.2 1.3-5.9 3-8.4V18h6v26H32c0 2.2-1.8 4-4 4s-4-1.8-4-4h-6c0 2.2-1.8 4-4 4s-4-1.8-4-4h-4z' fill='%23FFC72C'/%3E%3C/svg%3E">
 <title>麦麦营养点餐助手</title>
 <style>
 :root{
@@ -238,6 +241,17 @@ body{
 .dist{font-size:12px;color:var(--mcd-gray-3);flex:none}
 .dist-src{display:block;font-size:10px;color:var(--mcd-gray-3);opacity:.75;margin-top:1px}
 .store-code{font-size:11px!important;color:var(--mcd-gray-3);opacity:.85;font-variant-numeric:tabular-nums}
+/* 实时模式：MCP 代理在线时的徽标与提示 */
+.tag-live{background:#E7F7EC;color:#0A7A33;border:1px solid rgba(10,122,51,.35)}
+.live-quote{margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(10,138,58,.07);border:1px solid rgba(10,138,58,.22);font-size:13px;line-height:1.5;color:#0A6B2D}
+.live-quote small{display:block;font-size:11px;opacity:.8;margin-top:3px}
+.live-quote b{color:#0A7A33}
+.live-quote .live-warn{color:#8A5A00}
+.live-quote .live-warn .ico{vertical-align:-3px;margin-right:2px}
+.live-spin{display:inline-block;width:10px;height:10px;border:2px solid rgba(10,122,51,.25);border-top-color:#0A7A33;border-radius:50%;animation:lqspin .8s linear infinite;vertical-align:-1px;margin-right:4px}
+@keyframes lqspin{to{transform:rotate(360deg)}}
+.pay-actions{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:12px}
+.pay-actions .btn-yellow,.pay-actions .btn-outline{margin:0;padding:0 22px;height:44px;line-height:44px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border-radius:22px}
 .store-group{font-size:12px;color:var(--mcd-gray-3);margin:14px 2px 8px;display:flex;align-items:center;gap:6px}
 .store-group::after{content:'';flex:1;height:1px;background:var(--mcd-gray-2)}
 .store-group:first-child{margin-top:2px}
@@ -804,7 +818,7 @@ body{
           <button class="store-refresh" id="storeRefreshBtn" data-page-node-id="iWqLjihjC1G9Rlw9fXtA9F"><svg class="ico ico-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-page-node-id="Wr4MP6hpZ4Fpy6k4u5b4Fq"><path d="M20 12a8 8 0 1 1-2.4-5.7" data-page-node-id="bvT3b0vyS6R6tFv3j0bjtr"/><path d="M20 3.6v4.8h-4.8" data-page-node-id="KgPVNsOIazjANLYc1KXAFQ"/></svg>刷新门店</button>
         </div>
         <div id="storeList" data-page-node-id="JEIpIjIRoI6GD9AEi8kQmY"></div>
-        <p class="hint" data-page-node-id="UokIYE5rrtq8EG3MbefsyE">距离基于实时定位计算（演示门店）；<b>真实门店</b>为 2026-10-24 通过麦当劳 MCP <b data-page-node-id="HWgS39ms4hAShGFGCip1ww">query-nearby-stores</b> 查询「天津市·蓟州区」的返回快照，含门店编号与营业时间；下单仍为演示态，不会真实扣款。</p>
+        <p class="hint" data-page-node-id="UokIYE5rrtq8EG3MbefsyE"><span id="storeHintLive" style="display:none;color:#0A7A33">当前为 <b>实时模式</b>：门店按你的定位经 MCP 实时查询、距离为真实直线距离、下单会创建真实订单并跳转支付页。</span><span id="storeHintSnap">距离基于实时定位计算（演示门店）；<b>真实门店</b>为 2026-10-24 通过麦当劳 MCP <b data-page-node-id="HWgS39ms4hAShGFGCip1ww">query-nearby-stores</b> 查询「天津市·蓟州区」的返回快照，含门店编号与营业时间；下单仍为演示态，不会真实扣款。</span></p>
       </div>
     </section>
 
@@ -821,6 +835,7 @@ body{
         <p class="sub" id="orderStoreSub" data-page-node-id="CSbkRRsE3qPrEvqBEu7bBe">-</p>
         <div id="orderSummary" data-page-node-id="7CJChhZTj1hG5W8w0qMVat"></div>
         <div class="sum-row total" data-page-node-id="BmCXiV5ZiYJFHCKajyNcLk"><span data-page-node-id="tggJLcFs3pQXrpNU4JLemq">应付合计</span><b id="orderTotal" data-page-node-id="ISi0k58CcgcXS445jMgrKY">¥0</b></div>
+        <div id="orderLiveQuote" class="live-quote"></div>
       </div>
       <div class="card" id="orderAddrCard" data-page-node-id="rB1fgEn8ggiJXeUutGiGa3">
         <div class="addr-box" data-page-node-id="DdiWsTs2mZ0tzYCFFCGMxB">
@@ -832,7 +847,7 @@ body{
           <span class="tag tag-gray" data-page-node-id="XyEDHTADdS22y3LlPyYo75">默认</span>
         </div>
       </div>
-      <div class="demo-note" data-page-node-id="kvD9M8AKsS2fVSswcT4BcW"><svg class="ico ico-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-page-node-id="Y2C25poKwevnqq5UIS1d4Z"><path d="M12 4.2L2.8 19.8h18.4z" data-page-node-id="CTok31FwjdJE8rFTj5F7rW"/><path d="M12 9.8v4.4" data-page-node-id="2zVwEfJeRbs7mAFSlkIBcT"/><path d="M12 16.8h.02" data-page-node-id="ro1fLSSJBBOzW2uG1La3WL"/></svg>本页为 UI 流程演示：不会真实扣款。在完整 Skill 中，此处经你明确确认后调用麦当劳 MCP 的 <b data-page-node-id="eoqGmpSGXyPK1FU7heJWTN">create-order</b> 创建真实订单并返回支付链接。</div>
+      <div class="demo-note" id="orderDemoNote" data-page-node-id="kvD9M8AKsS2fVSswcT4BcW"><svg class="ico ico-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-page-node-id="Y2C25poKwevnqq5UIS1d4Z"><path d="M12 4.2L2.8 19.8h18.4z" data-page-node-id="CTok31FwjdJE8rFTj5F7rW"/><path d="M12 9.8v4.4" data-page-node-id="2zVwEfJeRbs7mAFSlkIBcT"/><path d="M12 16.8h.02" data-page-node-id="ro1fLSSJBBOzW2uG1La3WL"/></svg>本页为 UI 流程演示：不会真实扣款。在完整 Skill 中，此处经你明确确认后调用麦当劳 MCP 的 <b data-page-node-id="eoqGmpSGXyPK1FU7heJWTN">create-order</b> 创建真实订单并返回支付链接。</div>
     </section>
 
   </main>
@@ -1178,7 +1193,10 @@ var STORES = [
 /* 真实门店快照：2026-10-24 通过麦当劳 MCP query-nearby-stores 实测查询
    （searchType=2 按位置、city=天津市、keyword=蓟州区、beType=1 到店自取），
    以下字段均为 MCP 原始返回：storeCode/门店名/地址/距离(米)/营业时间/营业状态/预约支持。
-   注意：MCP 未返回经纬度（longitude/latitude 为 0），故距离展示用 MCP 返回值而非定位计算。 */
+   MCP 不返回经纬度（longitude/latitude 为 0），故 lat/lng 取自 OpenStreetMap 街道/地标级
+   坐标（WGS-84），并用三家门店的 MCP 距离做三角校验（唯一自洽组合，反推基准点落在蓟州城区
+   中心），误差约百米——有坐标后距离即可按你的实时定位用 haversine 真实计算；
+   实时模式（服务端代理）下会自动改用按你当前位置实时查询的门店列表。 */
 var REAL_STORES_META = {
   source: '麦当劳 MCP · query-nearby-stores',
   query: '天津市 · 蓟州区（到店自取）',
@@ -1186,12 +1204,15 @@ var REAL_STORES_META = {
 };
 var REAL_STORES = [
   {id:'r1', storeCode:'1980128', name:'麦当劳天津渔阳南路餐厅', addr:'渔阳南路16号',
-   dist:0.17, mcpDist:170, drive:false, delivery:false, open:'07:00–23:00', business:true, reservation:true},
+   dist:0.17, mcpDist:170, lat:40.0434, lng:117.4011,
+   drive:false, delivery:false, open:'07:00–23:00', business:true, reservation:true},
   {id:'r2', storeCode:'1980269', name:'麦当劳天津蓟州万达广场餐厅', addr:'渔阳镇溪水路6号万达广场一楼',
-   dist:3.39, mcpDist:3385, drive:false, delivery:false, open:'07:00–23:00', business:true, reservation:true},
+   dist:3.39, mcpDist:3385, lat:40.0228, lng:117.3716,
+   drive:false, delivery:false, open:'07:00–23:00', business:true, reservation:true},
   {id:'r3', storeCode:'1980278', name:'麦当劳天津天一绿海得来速餐厅',
    addr:'渔阳镇翠湖东路北端东侧、山水颐城北侧天一绿海城(揽秀园)48号楼1F层东侧1号2号商铺',
-   dist:3.76, mcpDist:3757, drive:true, delivery:false, open:'07:00–23:00', business:false, reservation:false}
+   dist:3.76, mcpDist:3757, lat:40.0338, lng:117.4401,
+   drive:true, delivery:false, open:'07:00–23:00', business:false, reservation:false}
 ];
 var COUPONS = [
   {id:'c1', name:'满 30 减 6',  min:30, off:6},
@@ -1512,16 +1533,42 @@ var STATE = {
   style:null, budget:0, avoids:[], dining:null, storeId:null,
   results:[], groupList:[], groupPick:0, groupDeal:null,
   orderId:null, teenWarned:false, swapCount:0, unifiedTastes:[],
-  activePerson:0, userPos:null
+  activePerson:0, userPos:null, liveOrder:null
 };
 function resetState(){
   STATE.step=0; STATE.peopleCount=1; STATE.infoMode=null; STATE.persons=[];
   STATE.style=null; STATE.budget=0; STATE.avoids=[]; STATE.dining=null; STATE.storeId=null;
   STATE.results=[]; STATE.groupList=[]; STATE.groupPick=0; STATE.groupDeal=null;
   STATE.orderId=null; STATE.teenWarned=false; STATE.swapCount=0; STATE.unifiedTastes=[];
-  STATE.activePerson=0; STATE.userPos=null;
+  STATE.activePerson=0; STATE.userPos=null; STATE.liveOrder=null;
+  LIVE_STORES = []; LIVE.area = null;
   stopStoreLive();
 }
+
+/* ================= 实时模式：MCP 代理探测 =================
+   页面本身永远不接触 MCP Token（Token 只在服务端）。本页通过相对路径 api/health 探测：
+   命中 → 进入实时模式（按当前定位查真实门店 / 真实核价 / 真实下单并跳支付页）；
+   未命中（file:// 打开、纯静态托管、无 Token）→ 保持原来的快照 + 演示模式，行为完全不变。 */
+var LIVE = { on:false, checked:false, area:null };
+var LIVE_STORES = [];
+(function probeLive(){
+  try {
+    if (typeof window.fetch !== 'function') return;
+    /* file:// 本地打开时不做探测：既无服务端，也会让浏览器打印一条 CORS 报错污染控制台 */
+    if (window.location && window.location.protocol === 'file:'){ LIVE.checked = true; return; }
+    window.fetch('api/health', { cache:'no-store' }).then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if (j && j.live){
+          LIVE.on = true;
+          if (document.body) document.body.classList.add('live-mode');
+          var hl = $('#storeHintLive'); if (hl) hl.style.display = '';
+          var hs = $('#storeHintSnap'); if (hs) hs.style.display = 'none';
+        }
+        LIVE.checked = true;
+      })
+      .catch(function(){ LIVE.on = false; LIVE.checked = true; });
+  } catch(e){ LIVE.on = false; LIVE.checked = true; }
+})();
 
 /* ================= 滚轮选择器：年龄 / 身高 / 体重 ================= */
 /* 交互：触屏/鼠标按住上下拖（带边缘橡皮筋与惯性）、桌面鼠标滚轮、点击某一项、键盘方向键
@@ -2016,22 +2063,63 @@ function stopStoreLive(){
   storeWatchId = null;
   if (storeTimer){ clearInterval(storeTimer); storeTimer = null; }
 }
+/* ---- 实时门店：按当前定位经服务端代理查 MCP（页面不接触 Token） ----
+   位置移动超过 200m 或距上次查询超过 60s 才重新请求，避免 watchPosition 高频回调打爆接口。 */
+var liveFetchAt = 0, liveFetchPos = null, liveFetching = false;
+function liveStoresNeeded(){
+  if (!LIVE.on || !STATE.userPos || STATE.dining === 'delivery') return false;
+  if (liveFetching) return false;
+  if (!liveFetchPos) return true;
+  if (Date.now() - liveFetchAt > 60000) return true;
+  return haversine(liveFetchPos.lat, liveFetchPos.lng, STATE.userPos.lat, STATE.userPos.lng) > 0.2;
+}
+function fetchLiveStores(){
+  if (!liveStoresNeeded()) return Promise.resolve(false);
+  liveFetching = true;
+  return window.fetch('api/stores?lat=' + STATE.userPos.lat + '&lng=' + STATE.userPos.lng, { cache:'no-store' })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(j){
+      if (j && j.ok && j.stores){
+        LIVE_STORES = j.stores.map(function(s){
+          return {
+            id: 'lv' + s.storeCode, storeCode: s.storeCode, name: s.name, addr: s.addr,
+            lat: s.lat, lng: s.lng,
+            dist: s.mcpDist != null ? s.mcpDist / 1000 : 99, mcpDist: s.mcpDist,
+            drive:false, delivery:false, open: s.open, business: s.business, reservation: s.reservation
+          };
+        });
+        LIVE.area = j.area || null;
+        liveFetchPos = { lat: STATE.userPos.lat, lng: STATE.userPos.lng };
+        liveFetchAt = Date.now();
+        return true;
+      }
+      LIVE_STORES = [];
+      return false;
+    })
+    .catch(function(){ LIVE_STORES = []; return false; })
+    .then(function(v){ liveFetching = false; return v; });
+}
 function startStoreLive(){
   stopStoreLive();
   if (navigator.geolocation){
     try {
       storeWatchId = navigator.geolocation.watchPosition(function(pos){
         STATE.userPos = {lat: pos.coords.latitude, lng: pos.coords.longitude};
-        renderStores();
-      }, function(){ /* 用户拒绝或定位失败：保持演示距离 */ }, {enableHighAccuracy:true, maximumAge:10000, timeout:10000});
+        if (liveStoresNeeded()) fetchLiveStores().then(function(){ renderStores(); });
+        else renderStores();
+      }, function(){ /* 用户拒绝或定位失败：保持演示距离 */ renderStores(); }, {enableHighAccuracy:true, maximumAge:10000, timeout:10000});
     } catch(e){}
   }
-  storeTimer = setInterval(function(){ renderStores(); }, 20000); /* 心跳：刷新时间戳与排序 */
+  storeTimer = setInterval(function(){
+    if (liveStoresNeeded()) fetchLiveStores().then(function(){ renderStores(); });
+    else renderStores();
+  }, 20000); /* 心跳：刷新时间戳与排序 */
 }
 function storeCard(o, selId){
   var s = o.s, tags = '';
   if (o.real){
     tags += '<span class="tag tag-blue">MCP 真实门店</span>';
+    if (o.live) tags += '<span class="tag tag-live">实时</span>';
     if (s.business === false) tags += '<span class="tag tag-gray">暂停营业</span>';
     if (s.drive) tags += '<span class="tag tag-yellow">得来速</span>';
     if (s.reservation) tags += '<span class="tag tag-green">支持预约</span>';
@@ -2040,7 +2128,11 @@ function storeCard(o, selId){
     if (s.drive) tags += '<span class="tag tag-yellow">得来速</span>';
   }
   var dist;
-  if (o.real && s.mcpDist != null){
+  if (o.real && STATE.userPos && s.lat != null){
+    /* 有门店坐标（OSM 街道/地标级）又有定位 → 真实直线距离，随你移动实时变化 */
+    dist = (o.d < 1 ? Math.round(o.d * 1000) + 'm' : o.d.toFixed(1) + 'km')
+         + '<small class="dist-src">直线距离</small>';
+  } else if (o.real && s.mcpDist != null){
     /* MCP 距离单位为米；≥1000m 用整数运算折算 km，避免浮点四舍五入偏差（3385m → 3.39km） */
     dist = s.mcpDist >= 1000 ? (Math.round(s.mcpDist / 10) / 100) + 'km' : s.mcpDist + 'm';
     dist += '<small class="dist-src">MCP 距离</small>';
@@ -2057,19 +2149,24 @@ function storeCard(o, selId){
     + '<span class="ck"></span></button>';
 }
 function renderStores(){
-  /* 真实门店（MCP 快照）：仅到店场景展示——外送需要 delivery-query-stores + 地址ID，快照未包含 */
-  var real = (STATE.dining === 'delivery' ? [] : REAL_STORES)
-    .map(function(s){ return {s:s, d:storeDistance(s), real:true}; });
+  /* 实时门店优先（服务端按当前定位查 MCP）；否则用 2026-10-24 的 MCP 快照。
+     外送（delivery）需要 delivery-query-stores + 用户地址ID，两种模式均无 → 诚实隐藏真实门店 */
+  var usingLive = LIVE.on && LIVE_STORES.length > 0 && STATE.dining !== 'delivery';
+  var realSrc = usingLive ? LIVE_STORES : (STATE.dining === 'delivery' ? [] : REAL_STORES);
+  var real = realSrc.map(function(s){ return {s:s, d:storeDistance(s), real:true, live:usingLive}; });
   var demo = STORES.filter(function(s){
     if (STATE.dining === 'delivery') return s.delivery;
     return true;
-  }).map(function(s){ return {s:s, d:storeDistance(s), real:false}; });
+  }).map(function(s){ return {s:s, d:storeDistance(s), real:false, live:false}; });
   real.sort(function(a,b){ return a.d - b.d; });
   demo.sort(function(a,b){ return a.d - b.d; });
   var subMap = {delivery:'已按「麦乐送可配送」筛选', instore:'附近全部门店（到店核销）'};
   $('#storeSub').textContent = subMap[STATE.dining] + '（真实 ' + real.length + ' 家 + 演示 ' + demo.length + ' 家）';
+  var allClosed = usingLive && real.length > 0 && real.every(function(o){ return o.s.business === false; });
+  var liveTxt = ' · 门店按你当前位置实时查询（MCP）'
+    + (allClosed ? ' · <b style="color:#8A5A00">附近门店当前均已打烊，下单会失败</b>' : '');
   $('#storeStatus').innerHTML = STATE.userPos
-    ? '<span class="live-dot"></span>' + icon('pin') + ' <b>已实时定位</b> · 更新于 ' + fmtClock()
+    ? '<span class="live-dot"></span>' + icon('pin') + ' <b>已实时定位</b>' + (usingLive ? liveTxt : '') + ' · 更新于 ' + fmtClock()
     : icon('pin') + ' 未获得定位授权 · 真实门店距离取 MCP 返回值 · 更新于 ' + fmtClock();
   var all = real.concat(demo);
   /* 先定下有效选中项，保证默认第一个门店也有选中态（否则会出现"没选却能下一步"） */
@@ -2077,8 +2174,11 @@ function renderStores(){
   if (all.length && (!selId || !all.some(function(o){ return o.s.id === selId; }))) selId = all[0].s.id;
   var html = '';
   if (real.length){
-    html += '<div class="store-group">真实门店 · ' + REAL_STORES_META.source + '（' + REAL_STORES_META.fetchedAt
-      + ' 查询「' + REAL_STORES_META.query + '」）</div>';
+    html += usingLive
+      ? '<div class="store-group">真实门店 · 麦当劳 MCP 实时查询（'
+        + ((LIVE.area && (LIVE.area.city + LIVE.area.keyword)) || '当前位置') + '）</div>'
+      : '<div class="store-group">真实门店 · ' + REAL_STORES_META.source + '（' + REAL_STORES_META.fetchedAt
+        + ' 查询「' + REAL_STORES_META.query + '」）</div>';
     html += real.map(function(o){ return storeCard(o, selId); }).join('');
   }
   if (demo.length){
@@ -2322,15 +2422,38 @@ function swapOne(i, dir){
 function byIdStore(id){
   for (var i=0;i<STORES.length;i++) if (STORES[i].id===id) return STORES[i];
   for (var j=0;j<REAL_STORES.length;j++) if (REAL_STORES[j].id===id) return REAL_STORES[j];
+  for (var k=0;k<LIVE_STORES.length;k++) if (LIVE_STORES[k].id===id) return LIVE_STORES[k];
   return null;
+}
+/* 推荐结果里所有餐品的演示 id（供服务端映射成麦当劳真实商品编码） */
+function collectOrderItemIds(){
+  var ids = [];
+  if (STATE.style === 'group'){
+    var g = STATE.groupDeal;
+    if (g) g.items.forEach(function(pair){ ids.push(pair[0]); });
+  } else {
+    STATE.results.forEach(function(r){
+      if (r.current) r.current.items.forEach(function(it){ ids.push(it.id); });
+    });
+  }
+  return ids;
 }
 
 /* ================= 渲染：订单 ================= */
+/* 是否走真实下单：实时模式 + 门店有编号 + 当日麦当劳侧额度未用完 */
+function liveOrderAvailable(){
+  var q = false;
+  try { q = sessionStorage.getItem('mcdQuotaOut') === '1'; } catch(e){}
+  if (!LIVE.on || q) return false;
+  var s = byIdStore(STATE.storeId);
+  return !!(s && s.storeCode);
+}
 function renderOrder(){
   var store = byIdStore(STATE.storeId);
   var diningTxt = STATE.dining === 'delivery' ? icon('scooter')+' 麦乐送' : icon('storefront')+' 到店';
   var storeTxt = store ? store.name : '-';
-  if (store && store.storeCode) storeTxt += ' <small class="store-code-inline">（' + store.storeCode + ' · MCP 真实门店 · 演示下单）</small>';
+  if (store && store.storeCode) storeTxt += ' <small class="store-code-inline">（' + store.storeCode + ' · MCP 真实门店 · '
+    + (LIVE.on ? '可真实下单' : '演示下单') + '）</small>';
   $('#orderStoreSub').innerHTML = storeTxt + ' · ' + diningTxt + (STATE.style==='group'?' · '+icon('ticket')+' 团购':'');
   $('#orderAddrCard').style.display = STATE.dining === 'delivery' ? '' : 'none';
   var html = '';
@@ -2360,10 +2483,110 @@ function renderOrder(){
   }
   $('#orderSummary').innerHTML = html;
   $('#orderTotal').textContent = fmt(subtotal - (STATE.style==='custom' && bestCoupon(subtotal) ? bestCoupon(subtotal).off : 0));
-  $('#btnNext').textContent = '提交订单（演示）';
+  /* 当日麦当劳侧下单额度用完（MCP 返回）：如实告知，并降级为演示下单，流程不被打断 */
+  var quotaOut = false;
+  try { quotaOut = sessionStorage.getItem('mcdQuotaOut') === '1'; } catch(e){}
+  $('#btnNext').textContent = (LIVE.on && store && store.storeCode && !quotaOut) ? '提交订单并支付' : '提交订单（演示）';
+  if (quotaOut && LIVE.on){
+    $('#orderLiveQuote').innerHTML = '<div class="demo-note" style="margin:0">' + icon('warning')
+      + ' 麦当劳 MCP 今日下单额度已用完，本次以<b>演示模式</b>完成（真实门店、真实核价仍为 MCP 实时数据）。'
+      + '真实下单链路已实测可用：create-order → 订单号 → 支付链接。</div>';
+  } else {
+    renderLiveQuote(store);
+  }
+  /* 底部说明必须与真实行为一致：实时模式绝不能说「不会真实扣款」 */
+  var note = $('#orderDemoNote');
+  if (note){
+    note.innerHTML = liveOrderAvailable()
+      ? icon('check') + ' 本单将创建<b>麦当劳真实订单</b>：点击「提交订单并支付」后先弹确认框，'
+        + '确认才由服务端调用 MCP <b>create-order</b>，成功即跳转麦当劳官方支付页。未支付订单 15 分钟后自动取消，'
+        + '支付在本页之外完成，本页不接触你的支付信息。'
+      : icon('warning') + ' 本页为 UI 流程演示：不会真实扣款。实时模式下（通过服务端代理打开）此处会经你明确确认后调用麦当劳 MCP 的 <b>create-order</b> 创建真实订单并返回支付链接。';
+  }
+}
+/* 实时核价：调用服务端 calculate-price 拿麦当劳真实价格（演示价仅用于算法演示） */
+function renderLiveQuote(store){
+  var box = $('#orderLiveQuote');
+  if (!box) return;
+  if (!LIVE.on || !store || !store.storeCode){ box.innerHTML = ''; return; }
+  var ids = collectOrderItemIds();
+  if (!ids.length){ box.innerHTML = ''; return; }
+  box.innerHTML = '<span class="live-spin"></span> 正在向麦当劳核对实时价格…';
+  window.fetch('api/quote', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ storeCode: store.storeCode, itemIds: ids })
+  }).then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(j){
+      if (!j || !j.ok){
+        /* 不能静默清空：打烊/无在售/接口异常都要如实说，否则用户以为页面卡了 */
+        box.innerHTML = '<span class="live-warn">' + icon('warning') + ' '
+          + ((j && j.error) || '麦当劳实时核价暂不可用') + '</span>';
+        return;
+      }
+      var miss = (j.unmapped && j.unmapped.length) ? '（' + j.unmapped.length + ' 款在该店无在售商品，未计入）' : '';
+      box.innerHTML = '<b>麦当劳实时核价：¥' + (j.total == null ? '-' : j.total.toFixed(1)) + '</b>'
+        + '<small>共 ' + j.matched.length + ' 件 · 由 MCP calculate-price 计算' + miss
+        + '；上方为演示算法价格，实付以麦当劳为准</small>';
+    })
+    .catch(function(){ box.innerHTML = ''; });
+}
+/* 真实下单：确认弹窗（写操作必须用户明确确认）→ 服务端 create-order → 支付链接 */
+function confirmLiveOrder(btn){
+  var store = byIdStore(STATE.storeId);
+  var ids = collectOrderItemIds();
+  var itemsTxt = ids.map(function(id){ var it = findItem(id); return it ? it.name : id; }).join('、');
+  showModal({
+    title: '确认下单',
+    body: '<div style="text-align:left">将在 <b>' + (store ? store.name : '-') + '</b>（门店编号 '
+      + (store && store.storeCode ? store.storeCode : '-') + '）创建<b>麦当劳真实订单</b>：<br>'
+      + itemsTxt + '<br><br>'
+      + '· 调用 <b>MCP create-order</b>，返回订单号与支付链接<br>'
+      + '· 随后跳转麦当劳支付页完成付款<br>'
+      + '· 未支付的订单会在 15 分钟后自动取消<br>'
+      + '· 餐品按该店在售菜单匹配，个别演示餐品若无在售商品不会计入</div>',
+    actions: [
+      { label:'再看看', fn:function(){ btn.disabled = false; } },
+      { label:'确认下单并支付', primary:true, fn:function(){ doLiveOrder(btn); } }
+    ]
+  });
+}
+function doLiveOrder(btn){
+  var store = byIdStore(STATE.storeId);
+  var ids = collectOrderItemIds();
+  btn.disabled = true;
+  window.fetch('api/order', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ storeCode: store ? store.storeCode : '', itemIds: ids })
+  }).then(function(r){ return r.json().catch(function(){ return null; }); })
+    .then(function(j){
+      if (j && j.ok){
+        STATE.liveOrder = { orderId:j.orderId, payH5Url:j.payH5Url, total:j.total, items:j.items || [], unmatched:j.unmatched || [] };
+        renderOrderSuccess();
+      } else {
+        var code = (j && j.code) || 'UNKNOWN';
+        /* 麦当劳侧限额（今日下单数上限等）属于平台限制，记为当日不再重试，避免反复打扰 */
+        if (code === 'QUOTA'){ try { sessionStorage.setItem('mcdQuotaOut','1'); } catch(e){} renderOrder(); }
+        showModal({ title:'下单未成功', body:'<div style="text-align:left">原因：'
+          + ((j && j.error) || '服务端返回异常') + '<br><br>'
+          + (code === 'QUOTA'
+              ? '这是麦当劳 MCP 平台侧的当日下单额度限制，不是本页故障；已创建的真实订单不受影响。<br>你可以改用演示模式把流程走完。'
+              : '你可以换一家门店，或改用演示模式体验完整流程。') + '</div>',
+          actions:[
+            { label:'知道了', fn:function(){ btn.disabled = false; } },
+            { label:'改用演示模式完成体验', primary:true, fn:function(){ STATE.liveOrder = null; btn.disabled = false; renderOrderSuccess(); } }
+          ] });
+        btn.disabled = false;
+      }
+    })
+    .catch(function(e){
+      showModal({ title:'网络异常', body:'<div style="text-align:left">' + String((e && e.message) || e) + '</div>',
+        actions:[{ label:'知道了', primary:true }] });
+      btn.disabled = false;
+    });
 }
 function renderOrderSuccess(){
   SFX.play('success');
+  if (STATE.liveOrder){ renderLiveOrderSuccess(); return; }
   var store = byIdStore(STATE.storeId);
   var subtotal = 0, detail = '';
   if (STATE.style === 'group'){
@@ -2391,6 +2614,47 @@ function renderOrderSuccess(){
     + '<div class="demo-note">' + icon('warning') + ' UI 演示环境，未产生真实订单。完整 Skill 中，此处经你确认后调用麦当劳 MCP <b>create-order</b>，返回订单号与支付链接，扫码完成支付。</div>'
     + '<div style="text-align:center;margin-top:14px"><button class="btn-yellow" id="btnRestart" style="max-width:280px">'+icon('refresh')+' 再帮别人点一单</button></div>';
   $('#btnRestart').onclick = function(){ resetState(); go(0); };
+  $('#btnNext').style.display = 'none';
+  $('#btnBack').style.display = 'none';
+}
+
+/* 真实订单成功页：展示真实订单号，并自动跳转麦当劳支付页（附手动按钮兜底） */
+var payJumpTimer = null, payJumpLeft = 0;
+function renderLiveOrderSuccess(){
+  var lo = STATE.liveOrder, store = byIdStore(STATE.storeId);
+  STATE.orderId = lo.orderId;
+  var miss = lo.unmatched.length
+    ? '<div class="demo-note">' + icon('warning') + ' 有 ' + lo.unmatched.length + ' 款演示餐品在该店无对应在售商品，未计入本单：'
+      + lo.unmatched.map(function(u){ return u.name; }).join('、') + '</div>' : '';
+  $('#page-order').innerHTML = '<div class="card order-ok">'
+    + '<div class="ok-ic">✓</div><h3>真实订单已创建</h3>'
+    + '<div class="oid">订单号 ' + lo.orderId + ' · ' + (store ? store.name : '') + '</div>'
+    + '<div style="margin-top:14px;font-size:14px;color:var(--mcd-gray-3)">'
+    + (lo.items.length ? lo.items.map(function(it){ return '<div style="padding:2px 0">' + it.name + ' ×' + it.qty + '</div>'; }).join('') : '')
+    + '</div>'
+    + '<div class="sum-row total" style="margin-top:10px"><span>实付（麦当劳实价）</span><b>¥'
+    + (lo.total == null ? '-' : lo.total.toFixed(1)) + '</b></div>'
+    + '</div>' + miss
+    + '<div class="live-quote" style="text-align:center">' + icon('pin') + ' 正在跳转麦当劳支付页… <b id="payCountdown">2</b> 秒后自动跳转</div>'
+    + '<div class="pay-actions"><a class="btn-yellow" id="btnPay" href="' + lo.payH5Url + '">立即前往支付</a>'
+    + '<button class="btn-outline" id="btnStayHere">留在本页</button></div>'
+    + '<div class="demo-note">' + icon('warning') + ' 订单由麦当劳 MCP <b>create-order</b> 真实创建（未支付将在 15 分钟后自动取消）。'
+    + '支付在麦当劳官方页面完成，本页不接触你的支付信息。</div>'
+    + '<div style="text-align:center;margin-top:14px"><button class="btn-yellow" id="btnRestart" style="max-width:280px">'+icon('refresh')+' 再帮别人点一单</button></div>';
+  $('#btnRestart').onclick = function(){ resetState(); go(0); };
+  $('#btnStayHere').onclick = function(){ if (payJumpTimer){ clearInterval(payJumpTimer); payJumpTimer = null; } this.style.display = 'none'; };
+  $('#btnPay').onclick = function(){ if (payJumpTimer){ clearInterval(payJumpTimer); payJumpTimer = null; } };
+  /* 自动跳转：部分环境（如微信内嵌浏览器）可能拦截，按钮即为兜底 */
+  payJumpLeft = 2;
+  var cd = $('#payCountdown');
+  payJumpTimer = setInterval(function(){
+    payJumpLeft--;
+    if (cd) cd.textContent = String(payJumpLeft);
+    if (payJumpLeft <= 0){
+      clearInterval(payJumpTimer); payJumpTimer = null;
+      try { window.location.href = lo.payH5Url; } catch(e){}
+    }
+  }, 1000);
   $('#btnNext').style.display = 'none';
   $('#btnBack').style.display = 'none';
 }
@@ -2617,6 +2881,12 @@ $('#btnNext').onclick = async function(){
     }
     if (key === 'result')  { await load(3000, '正在汇总订单', '核对餐品、价格与优惠券', '<b>为什么再核对一遍？</b>确认餐品、营养和优惠券都正确；总价超预算时会自动降级，并如实告诉你。', NO_GAME_DELAY); if (navSeq !== myNav) return; go(7); }
     if (key === 'order')   {
+      /* 实时模式：先确认，再经服务端调用 MCP create-order 建真实订单并跳支付页 */
+      if (liveOrderAvailable()){
+        if (navSeq !== myNav) return;
+        confirmLiveOrder(btn);
+        return;
+      }
       await load(2000, '正在创建订单', '演示环境，不会真实扣款', '<b>不会真的扣款？</b>对，这是 UI 演示。完整版本中，也只有你明确点击确认后，才会调用麦当劳 MCP 创建真实订单。', NO_GAME_DELAY);
       if (navSeq !== myNav) return;
       renderOrderSuccess();
@@ -2640,7 +2910,10 @@ $('#storeRefreshBtn').onclick = function(){
   if (navigator.geolocation){
     navigator.geolocation.getCurrentPosition(function(pos){
       STATE.userPos = {lat: pos.coords.latitude, lng: pos.coords.longitude};
-      done('门店列表已按最新位置更新');
+      liveFetchAt = 0; liveFetchPos = null; /* 手动刷新：强制重新查实时门店 */
+      fetchLiveStores().then(function(ok){
+        done(ok ? '已按当前位置重新查询真实门店' : '门店列表已按最新位置更新');
+      });
     }, function(){ done('定位不可用，已按演示距离刷新'); }, {enableHighAccuracy:true, timeout:8000});
   } else {
     done('当前环境不支持定位，已刷新列表');

@@ -112,6 +112,23 @@ python3 -m http.server 8080
 
 > ⚠️ Token 只存放在本机客户端配置或环境变量中，**切勿提交到公开仓库**或贴到公开页面。
 
+### 3. 跑实时模式（真实门店 / 真实核价 / 真实下单）
+
+UI 原型本身只发相对路径的 `api/*` 请求，**不接触 Token**。想让页面直接吃到真实数据，需要一个持有 Token 的服务端代理（零依赖，只用 Node 内置模块）：
+
+```bash
+cd mcd-nutrition-assistant
+echo "你的Token" > mcp-token.txt        # 已 .gitignore，也可改用环境变量
+export MCD_MCP_TOKEN="你的Token"
+PORT=3123 node server.js
+# 浏览器访问 http://localhost:3123
+```
+
+- 代理启动后，页面探测 `api/health` 命中即进入**实时模式**：门店按你的当前定位实时查询、价格为麦当劳实时核价、下单会创建真实订单并跳转支付页（需二次确认）
+- 直接用 `file://` 打开或纯静态托管（没有代理）时，页面自动保持**快照 + 演示模式**，行为与之前完全一致
+
+接口一览：`GET /api/health`、`GET /api/stores?lat&lng`、`GET /api/menu?store`、`POST /api/quote`、`POST /api/order`（默认每 IP 每小时 3 单，`MCD_ORDER_LIMIT` 可调）。详细架构、踩坑与实测记录见 [MCP_INTEGRATION.md](./MCP_INTEGRATION.md) 第 7 节。
+
 ## 使用示例
 
 配置好 MCP 后，在对话中直接描述需求即可，例如：
